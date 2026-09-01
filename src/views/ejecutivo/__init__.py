@@ -1,0 +1,1 @@
+"""Vistas del rol ejecutivo."""

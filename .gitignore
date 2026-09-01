@@ -1,0 +1,58 @@
+# ---- Python / entorno local ----
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+env/
+ENV/
+*.egg-info/
+.eggs/
+dist/
+build/
+pip-wheel-metadata/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.log
+
+# ---- Secretos y credenciales ----
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+
+# ---- IDE / SO ----
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---- Datos y migraciones (no necesarios en Streamlit Cloud) ----
+# La app en producción usa Supabase; estos archivos son solo para setup/migración local.
+/db/
+data/*
+!data/*.example
+/scripts/
+
+# Documentación de setup local (opcional en el repo; descomentá la línea si querés subirla)
+SETUP_SUPABASE.md
+
+# ---- Tipos de archivo con datos sensibles en cualquier carpeta ----
+*.sql
+*.csv
+!*.example
+*.xlsx
+*.xls
+*.jsonl
+
+# ---- Cursor / agentes (local) ----
+.cursor/
