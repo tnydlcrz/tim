@@ -46,6 +46,13 @@ data/*
 # Documentación de setup local (opcional en el repo; descomentá la línea si querés subirla)
 SETUP_SUPABASE.md
 
+# ---- Capturas e imágenes locales (no van al deploy) ----
+/*.png
+/*.jpg
+/*.jpeg
+/*.webp
+/screenshots/
+
 # ---- Tipos de archivo con datos sensibles en cualquier carpeta ----
 *.sql
 *.csv
