@@ -391,11 +391,12 @@ def render_dashboard(client: Client) -> None:
         st.warning("No hay datos. Ejecutá la migración o `db/seed.sql` en Supabase.")
         return
 
+    df_compromisos = compromisos.panel_sin_agenda(df_all)
     en_agenda = st.session_state.get("exec_view") == TAB_AGENDA
 
     if st.session_state.exec_selected_id:
         if not en_agenda:
-            filtered, activos = _sidebar_filters(df_all)
+            filtered, activos = _sidebar_filters(df_compromisos)
             kpis = compromisos.compute_kpis(activos)
             _kpi_row(kpis)
         _render_detalle(client, st.session_state.exec_selected_id)
@@ -405,7 +406,7 @@ def render_dashboard(client: Client) -> None:
         st.sidebar.caption("Los filtros de compromisos no aplican a la vista Agenda.")
         filtered = df_all
     else:
-        filtered, activos = _sidebar_filters(df_all)
+        filtered, activos = _sidebar_filters(df_compromisos)
         kpis = compromisos.compute_kpis(activos)
         _kpi_row(kpis)
 

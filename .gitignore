@@ -61,5 +61,13 @@ SETUP_SUPABASE.md
 *.xls
 *.jsonl
 
+# ---- Backups locales (datos sensibles; scripts sí van al repo) ----
+/backups/*
+!/backups/README.md
+!/backups/backup_db.py
+!/backups/backup_db.ps1
+!/backups/restore_db.ps1
+!/backups/restore_db.sql
+
 # ---- Cursor / agentes (local) ----
 .cursor/

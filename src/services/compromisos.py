@@ -296,6 +296,13 @@ def sort_panel(df: pd.DataFrame, sort_label: str) -> pd.DataFrame:
     return out
 
 
+def panel_sin_agenda(df: pd.DataFrame) -> pd.DataFrame:
+    """Excluye eventos de Agenda (tienen vista propia en ejecutivo)."""
+    if df.empty or "categoria" not in df.columns:
+        return df
+    return df[df["categoria"] != AGENDA_CATEGORIA].copy()
+
+
 def apply_filters(
     df: pd.DataFrame,
     *,

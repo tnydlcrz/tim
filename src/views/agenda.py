@@ -122,17 +122,6 @@ def render_agenda(client: Client, modo: str = "asistente") -> None:
         st.success(msg)
     ver_todos = bool(st.session_state.agenda_ver_todos)
     dia: date = st.session_state.agenda_fecha
-    incluir_cancelados = st.checkbox("Mostrar eventos cancelados", key="agenda_inactivos")
-
-    if ver_todos:
-        eventos_todos = compromisos.fetch_agenda_todos(client, incluir_inactivos=incluir_cancelados)
-        eventos_dia = sin_fecha = None
-        total = len(eventos_todos)
-    else:
-        eventos_todos = None
-        eventos_dia = compromisos.fetch_agenda_dia(client, dia, incluir_inactivos=incluir_cancelados)
-        sin_fecha = compromisos.fetch_agenda_sin_fecha(client, incluir_inactivos=incluir_cancelados)
-        total = len(eventos_dia) + len(sin_fecha)
 
     st.subheader("Agenda — todos los eventos" if ver_todos else "Agenda del día")
     st.caption(
@@ -182,13 +171,10 @@ def render_agenda(client: Client, modo: str = "asistente") -> None:
             on_click=_agenda_ver_todos,
         )
 
-    count_label = "Todos los eventos · Argentina" if ver_todos else f"{format_fecha(dia)} · Argentina"
-
-    tc1, tc2 = st.columns([4, 1])
-    with tc1:
-        if modo == "ejecutivo":
-            st.caption("Usá **Ver** en un evento para editarlo o eliminarlo.")
-    with tc2:
+    tb1, tb2 = st.columns([3, 1.2], vertical_alignment="center")
+    with tb1:
+        incluir_cancelados = st.checkbox("Mostrar eventos cancelados", key="agenda_inactivos")
+    with tb2:
         if modo == "asistente":
             if st.button("+ Nuevo evento", type="primary", key="agenda_nuevo", use_container_width=True):
                 st.session_state.edit_compromiso_id = None
@@ -196,14 +182,33 @@ def render_agenda(client: Client, modo: str = "asistente") -> None:
                 st.session_state.form_return_to = "Agenda"
                 st.session_state._nav_formulario = True
                 st.rerun()
-        else:
-            if st.button("+ Nuevo evento", type="primary", key="agenda_nuevo_exec", use_container_width=True):
-                exec_form.open_exec_form_new(return_to="agenda", solo_agenda=True)
-                st.rerun()
+        elif st.button("+ Nuevo evento", type="primary", key="agenda_nuevo_exec", use_container_width=True):
+            exec_form.open_exec_form_new(return_to="agenda", solo_agenda=True)
+            st.rerun()
 
-    st.markdown(
-        f'<p class="exec-list-count">{count_label} · {total} evento(s)</p>',
-        unsafe_allow_html=True,
-    )
+    if ver_todos:
+        eventos_todos = compromisos.fetch_agenda_todos(client, incluir_inactivos=incluir_cancelados)
+        eventos_dia = sin_fecha = None
+        total = len(eventos_todos)
+    else:
+        eventos_todos = None
+        eventos_dia = compromisos.fetch_agenda_dia(client, dia, incluir_inactivos=incluir_cancelados)
+        sin_fecha = compromisos.fetch_agenda_sin_fecha(client, incluir_inactivos=incluir_cancelados)
+        total = len(eventos_dia) + len(sin_fecha)
+
+    count_label = "Todos los eventos · Argentina" if ver_todos else f"{format_fecha(dia)} · Argentina"
+
+    mc1, mc2 = st.columns([1, 4], vertical_alignment="center")
+    with mc1:
+        st.markdown(
+            f'<p class="exec-list-count exec-list-count-inline">{count_label} · {total} evento(s)</p>',
+            unsafe_allow_html=True,
+        )
+    with mc2:
+        if modo == "ejecutivo":
+            st.markdown(
+                '<p class="exec-list-hint">Usá <strong>Ver</strong> en un evento para editarlo o eliminarlo.</p>',
+                unsafe_allow_html=True,
+            )
 
     _agenda_listas_fragment(ver_todos, modo, eventos_todos, eventos_dia, sin_fecha)
