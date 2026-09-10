@@ -334,6 +334,8 @@ def _render_detalle(client: Client, compromiso_id: str) -> None:
 
     if es_agenda and not row.get("activo", True):
         st.info("Evento cancelado.")
+    elif es_agenda:
+        st.caption("Para cancelar el evento, usá **Editar** y desmarcá «Evento programado».")
 
     c1, c2, c3 = st.columns(3)
     c1.write(f"**Fecha:** {format_fecha(row.get('fecha_inicio'))}")

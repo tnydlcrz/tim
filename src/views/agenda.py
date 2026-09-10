@@ -124,10 +124,6 @@ def render_agenda(client: Client, modo: str = "asistente") -> None:
     dia: date = st.session_state.agenda_fecha
 
     st.subheader("Agenda — todos los eventos" if ver_todos else "Agenda del día")
-    st.caption(
-        "Eventos de la categoría Agenda. Desmarcá «Evento programado» al editar para cancelar. "
-        "Zona horaria: Argentina."
-    )
 
     c_prev, c_fecha, c_next, c_hoy, c_todos = st.columns([1, 2.5, 1, 1.25, 1.25])
     with c_prev:

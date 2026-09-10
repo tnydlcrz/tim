@@ -368,6 +368,9 @@ def render_formulario(client: Client, edit_id: str | None = None, modo: str = "a
         _cancelar_formulario(modo)
         st.rerun()
 
+    if solo_agenda and edit_id:
+        st.caption("Desmarcá «Evento programado» para cancelar el evento.")
+
     if "lineas_form" not in st.session_state or st.session_state.get("_form_edit") != edit_id:
         if lineas_existing:
             st.session_state.lineas_form = [
@@ -451,7 +454,7 @@ def render_formulario(client: Client, edit_id: str | None = None, modo: str = "a
             activo = st.checkbox(
                 "Evento programado" if es_agenda else "Activo",
                 value=ex.get("activo", True),
-                help="Desmarcá si el evento fue cancelado." if es_agenda else None,
+                help="Desmarcá «Evento programado» para cancelar el evento." if es_agenda else None,
             )
 
             if not es_agenda and cat_nombre in ("Obras", "Equipamiento", "Nombramiento") and not est_id:
