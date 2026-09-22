@@ -246,9 +246,30 @@ def compute_kpis(df: pd.DataFrame) -> dict[str, int]:
     }
 
 
+def _clean_campo(value: object) -> str:
+    if value is None or (isinstance(value, float) and value != value):
+        return ""
+    s = str(value).strip()
+    return s if s and s.lower() not in ("none", "nan") else ""
+
+
+def format_ubicacion_compromiso(row: dict | pd.Series) -> str:
+    """Localidad y establecimiento para distinguir sedes con el mismo nombre."""
+    loc = _clean_campo(row.get("localidad"))
+    est = _clean_campo(row.get("establecimiento"))
+    if est:
+        return f"{loc} — {est}" if loc else est
+    base = _clean_campo(row.get("ubicacion_display"))
+    if base:
+        return f"{loc} — {base}" if loc else base
+    return loc or "—"
+
+
 SEARCH_COLUMNS = (
     "titulo",
     "ubicacion_display",
+    "localidad",
+    "establecimiento",
     "categoria",
     "subcategoria",
     "ambito",
@@ -323,7 +344,7 @@ def apply_filters(
         if establecimiento == "Ministerio de Salud (sin sede)":
             out = out[out["establecimiento_id"].isna()]
         else:
-            out = out[out["ubicacion_display"] == establecimiento]
+            out = out[out.apply(lambda r: format_ubicacion_compromiso(r) == establecimiento, axis=1)]
     if ambito and ambito != "Todos":
         out = out[out["ambito"] == ambito]
     if categoria and categoria != "Todos":

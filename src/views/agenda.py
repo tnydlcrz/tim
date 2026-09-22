@@ -46,7 +46,7 @@ def _render_evento(row, i: int, modo: str, *, mostrar_fecha: bool = False) -> No
         render_agenda_event_row(
             titulo=row_text(row.get("titulo")),
             hora=row.get("hora_inicio"),
-            ubicacion=row_text(row.get("ubicacion_display")),
+            ubicacion=row_text(compromisos.format_ubicacion_compromiso(row)),
             subcategoria=row_text(row.get("subcategoria")),
             prioridad=row_text(row.get("prioridad")),
             activo=bool(row.get("activo", True)),
@@ -123,7 +123,13 @@ def render_agenda(client: Client, modo: str = "asistente") -> None:
     ver_todos = bool(st.session_state.agenda_ver_todos)
     dia: date = st.session_state.agenda_fecha
 
-    st.subheader("Agenda — todos los eventos" if ver_todos else "Agenda del día")
+    titulo = "Agenda — todos los eventos" if ver_todos else "Agenda del día"
+    hdr1, hdr2 = st.columns([2.2, 1.8], vertical_alignment="center")
+    with hdr1:
+        st.subheader(titulo)
+    with hdr2:
+        incluir_cancelados = st.checkbox("Mostrar eventos cancelados", key="agenda_inactivos")
+    search_key = "agenda_search_exec" if modo == "ejecutivo" else "agenda_search_asist"
 
     c_prev, c_fecha, c_next, c_hoy, c_todos = st.columns([1, 2.5, 1, 1.25, 1.25])
     with c_prev:
@@ -167,9 +173,15 @@ def render_agenda(client: Client, modo: str = "asistente") -> None:
             on_click=_agenda_ver_todos,
         )
 
-    tb1, tb2 = st.columns([3, 1.2], vertical_alignment="center")
+    tb1, tb2 = st.columns([3, 1.2], vertical_alignment="bottom")
     with tb1:
-        incluir_cancelados = st.checkbox("Mostrar eventos cancelados", key="agenda_inactivos")
+        st.markdown('<span class="exec-toolbar-label">Buscar</span>', unsafe_allow_html=True)
+        st.text_input(
+            "Buscar eventos",
+            placeholder="Ej: reunión, Vidal, contacto…",
+            key=search_key,
+            label_visibility="collapsed",
+        )
     with tb2:
         if modo == "asistente":
             if st.button("+ Nuevo evento", type="primary", key="agenda_nuevo", use_container_width=True):
@@ -185,12 +197,25 @@ def render_agenda(client: Client, modo: str = "asistente") -> None:
     if ver_todos:
         eventos_todos = compromisos.fetch_agenda_todos(client, incluir_inactivos=incluir_cancelados)
         eventos_dia = sin_fecha = None
-        total = len(eventos_todos)
     else:
         eventos_todos = None
         eventos_dia = compromisos.fetch_agenda_dia(client, dia, incluir_inactivos=incluir_cancelados)
         sin_fecha = compromisos.fetch_agenda_sin_fecha(client, incluir_inactivos=incluir_cancelados)
-        total = len(eventos_dia) + len(sin_fecha)
+
+    q = (st.session_state.get(search_key) or "").strip()
+    if q:
+        if ver_todos and eventos_todos is not None:
+            eventos_todos = compromisos.filter_search(eventos_todos, q)
+        else:
+            if eventos_dia is not None:
+                eventos_dia = compromisos.filter_search(eventos_dia, q)
+            if sin_fecha is not None:
+                sin_fecha = compromisos.filter_search(sin_fecha, q)
+
+    if ver_todos:
+        total = len(eventos_todos) if eventos_todos is not None else 0
+    else:
+        total = len(eventos_dia or []) + len(sin_fecha or [])
 
     count_label = "Todos los eventos · Argentina" if ver_todos else f"{format_fecha(dia)} · Argentina"
 
@@ -202,9 +227,13 @@ def render_agenda(client: Client, modo: str = "asistente") -> None:
         )
     with mc2:
         if modo == "ejecutivo":
-            st.markdown(
-                '<p class="exec-list-hint">Usá <strong>Ver</strong> en un evento para editarlo o eliminarlo.</p>',
-                unsafe_allow_html=True,
+            hint = (
+                "Usá <strong>Ver</strong> en un evento para editarlo o eliminarlo."
             )
+        else:
+            hint = (
+                "Usá <strong>Editar</strong> en un evento para modificarlo o eliminarlo."
+            )
+        st.markdown(f'<p class="exec-list-hint">{hint}</p>', unsafe_allow_html=True)
 
     _agenda_listas_fragment(ver_todos, modo, eventos_todos, eventos_dia, sin_fecha)

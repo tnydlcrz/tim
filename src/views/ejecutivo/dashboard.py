@@ -72,7 +72,10 @@ def _sidebar_filters(df):
 
     categoria = st.sidebar.selectbox("Categoría", ["Todos"] + sorted(df["categoria"].dropna().unique().tolist()))
 
-    ubicaciones = ["Todos"] + sorted(df["ubicacion_display"].dropna().unique().tolist())
+    ubicaciones = ["Todos"] + sorted(
+        {compromisos.format_ubicacion_compromiso(row) for _, row in df.iterrows()}
+        - {"—"}
+    )
     if any(df["establecimiento_id"].isna()):
         if "Ministerio de Salud (sin sede)" not in ubicaciones:
             ubicaciones.append("Ministerio de Salud (sin sede)")
@@ -156,7 +159,7 @@ def _render_lista_filas(df) -> None:
         with c1:
             render_compromiso_row_compact(
                 titulo=row_text(row.get("titulo")),
-                ubicacion=row_text(row.get("ubicacion_display")),
+                ubicacion=row_text(compromisos.format_ubicacion_compromiso(row)),
                 categoria=row_text(row.get("categoria")),
                 subcategoria=row_text(row.get("subcategoria")),
                 prioridad=row_text(row.get("prioridad")),
@@ -316,7 +319,7 @@ def _render_detalle(client: Client, compromiso_id: str) -> None:
     cat_badge = badge(cat, "ambito") if cat else ""
     sub = row_text(row.get("subcategoria"))
     titulo = row.get("titulo") or ""
-    ubicacion = row.get("ubicacion_display") or ""
+    ubicacion = compromisos.format_ubicacion_compromiso(row)
     st.markdown(
         f'<div class="detalle-header">'
         f'{badge(row.get("prioridad", ""), pk)}{cat_badge}'
