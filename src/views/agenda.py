@@ -215,7 +215,9 @@ def render_agenda(client: Client, modo: str = "asistente") -> None:
     if ver_todos:
         total = len(eventos_todos) if eventos_todos is not None else 0
     else:
-        total = len(eventos_dia or []) + len(sin_fecha or [])
+        total = (len(eventos_dia) if eventos_dia is not None else 0) + (
+            len(sin_fecha) if sin_fecha is not None else 0
+        )
 
     count_label = "Todos los eventos · Argentina" if ver_todos else f"{format_fecha(dia)} · Argentina"
 
