@@ -422,16 +422,14 @@ def render_formulario(client: Client, edit_id: str | None = None, modo: str = "a
         cat_nombre = catalogos.nombre_por_id(cats["categorias"], cat_id)
         es_agenda = cat_nombre == compromisos.AGENDA_CATEGORIA
 
-        titulo = ex.get("titulo", "")
-        if es_agenda:
-            section_title("Cabecera")
-            titulo = st.text_input(
-                "Título del compromiso *",
-                value=ex.get("titulo", ""),
-                key=_form_key("titulo", edit_id),
-            )
-
         rep_id, loc_id, est_id = _render_ubicacion(cats, ex, edit_id, default_rep, default_loc)
+
+        section_title("Cabecera")
+        st.text_input(
+            "Título del compromiso *",
+            value=ex.get("titulo", ""),
+            key=_form_key("titulo", edit_id),
+        )
 
         fecha_inicio: date | None = None
         fecha_fin: date | None = None
@@ -446,10 +444,6 @@ def render_formulario(client: Client, edit_id: str | None = None, modo: str = "a
             fecha_inicio, hora_inicio, persona_sol = _render_agenda_detalle(ex, edit_id)
 
         with st.form("compromiso_form", clear_on_submit=not edit_id):
-            if not es_agenda:
-                section_title("Cabecera")
-                titulo = st.text_input("Título del compromiso *", value=ex.get("titulo", ""))
-
             if not es_agenda:
                 c7, c8 = st.columns(2)
                 with c7:
@@ -602,7 +596,7 @@ def render_formulario(client: Client, edit_id: str | None = None, modo: str = "a
                 st.rerun()
 
             if save:
-                titulo_guardar = (titulo or "").strip()
+                titulo_guardar = (st.session_state.get(_form_key("titulo", edit_id)) or "").strip()
                 if es_agenda:
                     estado_id = catalogos.id_por_nombre(cats["estados"], "Sin iniciar")
                     if not estado_id and cats["estados"]:
