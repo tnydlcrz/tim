@@ -42,7 +42,7 @@ def _sync_lineas_from_session(
         uid = ln["uid"]
         e_sel = st.session_state.get(f"le_{uid}", 0)
         a_sel = st.session_state.get(f"la_{uid}", 0)
-        eid = estado_ids[e_sel] if estado_ids[e_sel] else ln.get("estado_id")
+        eid = estado_ids[e_sel] if 0 <= e_sel < len(estado_ids) else ln.get("estado_id")
         avance = avance_opts[a_sel] if a_sel < len(avance_opts) else ln.get("avance_pct", 0)
         synced.append(
             {
@@ -56,10 +56,11 @@ def _sync_lineas_from_session(
     return synced
 
 
-def _lineas_validas(lineas_form: list[dict]) -> list[dict]:
+def _lineas_validas(lineas_form: list[dict], titulo_fallback: str = "") -> list[dict]:
+    titulo_fb = (titulo_fallback or "").strip()
     valid: list[dict] = []
     for ln in lineas_form:
-        desc = (ln.get("descripcion") or "").strip()
+        desc = (ln.get("descripcion") or "").strip() or titulo_fb
         eid = ln.get("estado_id")
         if desc and eid:
             valid.append(
@@ -70,6 +71,17 @@ def _lineas_validas(lineas_form: list[dict]) -> list[dict]:
                 }
             )
     return valid
+
+
+def open_asist_form_new(*, return_to: str = "Listado") -> None:
+    st.session_state.pop("asist_saved_id", None)
+    st.session_state.pop("edit_compromiso_id", None)
+    st.session_state.pop("form_solo_agenda", None)
+    st.session_state.pop("lineas_form", None)
+    st.session_state.pop("_form_edit", None)
+    st.session_state.form_return_to = return_to
+    st.session_state._nav_formulario = True
+    st.session_state._nav_asistente_page = "Formulario"
 
 def _parse_date(value: object | None) -> date | None:
     if not value:
@@ -330,6 +342,8 @@ def _finalizar_guardado(modo: str, edit_id: str | None, nuevo_id: str | None = N
             st.session_state.exec_form_return_id = nuevo_id
         st.session_state._exec_flash_msg = "Compromiso guardado."
     else:
+        if not edit_id and nuevo_id and not st.session_state.get("form_solo_agenda"):
+            st.session_state.asist_saved_id = nuevo_id
         st.session_state._flash_msg = "Compromiso guardado."
     _cancelar_formulario(modo)
 
@@ -371,6 +385,8 @@ def render_formulario(client: Client, edit_id: str | None = None, modo: str = "a
     if solo_agenda and edit_id:
         st.caption("Desmarcá «Evento programado» para cancelar el evento.")
 
+    estado_sin_iniciar_id = catalogos.id_por_nombre(cats["estados"], "Sin iniciar")
+
     if "lineas_form" not in st.session_state or st.session_state.get("_form_edit") != edit_id:
         if lineas_existing:
             st.session_state.lineas_form = [
@@ -384,7 +400,7 @@ def render_formulario(client: Client, edit_id: str | None = None, modo: str = "a
                 for ln in lineas_existing
             ]
         else:
-            st.session_state.lineas_form = [_linea_blank()]
+            st.session_state.lineas_form = [_linea_blank(estado_id=estado_sin_iniciar_id)]
         st.session_state._form_edit = edit_id
 
     ex = existing or {}
@@ -499,10 +515,13 @@ def render_formulario(client: Client, edit_id: str | None = None, modo: str = "a
 
             if not es_agenda:
                 section_title("Líneas de compromiso")
-                st.caption("Cada línea tiene estado y avance independientes.")
+                st.caption(
+                    "Estado y avance por línea. La descripción es opcional: si la dejás vacía, "
+                    "se guarda con el mismo texto del título."
+                )
 
             if not es_agenda:
-                estados_map = catalogos.catalogo_map(cats["estados"], include_empty=True)
+                estados_map = catalogos.catalogo_map(cats["estados"], include_empty=False)
                 estado_ids = list(estados_map.keys())
                 estado_labels = list(estados_map.values())
                 avance_opts = list(compromisos.AVANCE_NIVELES)
@@ -523,9 +542,10 @@ def render_formulario(client: Client, edit_id: str | None = None, modo: str = "a
                             delete_uid = uid
 
                     desc = st.text_input(
-                        "Descripción *",
+                        "Descripción",
                         value=ln.get("descripcion", ""),
                         key=f"ld_{uid}",
+                        placeholder="Opcional (si está vacía, se usa el título)",
                     )
                     ce, ca = st.columns(2)
                     with ce:
@@ -578,7 +598,7 @@ def render_formulario(client: Client, edit_id: str | None = None, modo: str = "a
                 st.session_state.lineas_form = _sync_lineas_from_session(
                     lineas_ui, estado_ids, tuple(avance_opts)
                 )
-                st.session_state.lineas_form.append(_linea_blank())
+                st.session_state.lineas_form.append(_linea_blank(estado_id=estado_sin_iniciar_id))
                 st.rerun()
 
             if save:
@@ -596,7 +616,7 @@ def render_formulario(client: Client, edit_id: str | None = None, modo: str = "a
                     ]
                 else:
                     synced = _sync_lineas_from_session(lineas_ui, estado_ids, tuple(avance_opts))
-                    valid_lineas = _lineas_validas(synced)
+                    valid_lineas = _lineas_validas(synced, titulo_guardar)
                 if not titulo_guardar:
                     st.error("El título es obligatorio.")
                     return
@@ -607,7 +627,7 @@ def render_formulario(client: Client, edit_id: str | None = None, modo: str = "a
                     st.error("No se pudo determinar el ámbito para la categoría seleccionada.")
                     return
                 if not valid_lineas:
-                    st.error("Agregá al menos una línea con descripción, estado y avance.")
+                    st.error("Seleccioná al menos una línea con estado (por defecto «Sin iniciar»).")
                     return
                 subcats = catalogos.fetch_subcategorias(client, cat_id)
                 subcategoria_id = sub_id if subcats and sub_id in {s["id"] for s in subcats} else None

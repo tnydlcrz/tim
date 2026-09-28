@@ -10,6 +10,7 @@ from src.services import compromisos
 from src.ui import badge, estado_kind, format_fecha, format_hora, prioridad_kind, progress_bar_block, render_compromiso_row_compact, rerun_app, row_text
 from src.views.agenda import render_agenda
 from src.views.asistente.formulario import render_formulario
+from src.views.compromiso_detalle import render_compromiso_info
 from src.views.ejecutivo import exec_form
 
 LENSES = ["Categoría", "Ámbito", "Establecimiento", "Prioridad", "Avance", "Mes / Año"]
@@ -298,11 +299,21 @@ def _render_detalle(client: Client, compromiso_id: str) -> None:
     lineas = compromisos.fetch_lineas(client, compromiso_id)
     es_agenda = row.get("categoria") == compromisos.AGENDA_CATEGORIA
 
-    c_back, c_edit, c_del = st.columns([6, 1, 1])
+    if es_agenda:
+        c_back, c_edit, c_del = st.columns([6, 1, 1])
+        c_new = None
+    else:
+        c_back, c_new, c_edit, c_del = st.columns([4, 2, 1, 1])
     with c_back:
         if st.button(_volver_label(), key="back_list"):
             _volver_desde_detalle()
             st.rerun()
+    if c_new is not None:
+        with c_new:
+            if st.button("+ Nuevo compromiso", type="primary", key="exec_detalle_nuevo", use_container_width=True):
+                st.session_state.exec_selected_id = None
+                exec_form.open_exec_form_new(return_to="lista", solo_agenda=False)
+                rerun_app()
     with c_edit:
         if st.button("Editar", key="exec_detalle_editar", use_container_width=True):
             return_to = "agenda" if st.session_state.get("exec_detail_from") == "agenda" else "detalle"
@@ -314,73 +325,7 @@ def _render_detalle(client: Client, compromiso_id: str) -> None:
             st.session_state.exec_pending_delete_titulo = row.get("titulo", "")
             st.rerun()
 
-    pk = prioridad_kind(row.get("prioridad", ""))
-    cat = row_text(row.get("categoria"))
-    cat_badge = badge(cat, "ambito") if cat else ""
-    sub = row_text(row.get("subcategoria"))
-    titulo = row.get("titulo") or ""
-    ubicacion = compromisos.format_ubicacion_compromiso(row)
-    st.markdown(
-        f'<div class="detalle-header">'
-        f'{badge(row.get("prioridad", ""), pk)}{cat_badge}'
-        f'<span class="detalle-ubicacion">{escape(ubicacion)}</span>'
-        f"</div>"
-        f"<h2>{escape(titulo)}</h2>"
-        + (f'<p class="card-categoria">{escape(sub)}</p>' if sub else ""),
-        unsafe_allow_html=True,
-    )
-    if not es_agenda:
-        st.markdown(
-            progress_bar_block(int(row.get("avance_pct") or 0), 12),
-            unsafe_allow_html=True,
-        )
-
-    if es_agenda and not row.get("activo", True):
-        st.info("Evento cancelado.")
-    elif es_agenda:
-        st.caption("Para cancelar el evento, usá **Editar** y desmarcá «Evento programado».")
-
-    c1, c2, c3 = st.columns(3)
-    c1.write(f"**Fecha:** {format_fecha(row.get('fecha_inicio'))}")
-    if es_agenda:
-        c2.write(f"**Hora:** {format_hora(row.get('hora_inicio'))}")
-        c3.write(f"**Estado:** {'Programado' if row.get('activo', True) else 'Cancelado'}")
-    else:
-        c2.write(f"**Fin:** {format_fecha(row.get('fecha_fin'))}")
-        c3.write(f"**Líneas:** {row.get('total_lineas', 0)}")
-
-    if not es_agenda:
-        c4, c5 = st.columns(2)
-        c4.write(f"**Servicio:** {row.get('servicio') or '—'}")
-        c5.write(f"**Área / Sector:** {row.get('area') or '—'}")
-
-        c6, c7 = st.columns(2)
-        c6.write(f"**Número de expediente:** {row.get('numero_expte') or '—'}")
-        c7.write(f"**Empresa:** {row.get('empresa') or '—'}")
-
-    if row.get("persona_solicitante"):
-        st.write(f"**{'Contacto' if es_agenda else 'Solicitante'}:** {row['persona_solicitante']}")
-    if row.get("telefono_solicitante"):
-        st.write(f"**Tel:** [{row['telefono_solicitante']}](tel:{row['telefono_solicitante']})")
-
-    if not es_agenda:
-        st.markdown("#### Ítems del compromiso")
-        for ln in lineas:
-            edo = ln.get("estados") or {}
-            ename = edo.get("nombre", "")
-            ek = estado_kind(ename)
-            st.markdown(
-                f"""
-                <div class="linea-card">
-                    <span>{ln.get('descripcion','')}</span>
-                    <div class="linea-card-meta">
-                        <span class="linea-avance">{int(ln.get('avance_pct') or 0)}%</span>
-                        {badge(ename, ek)}
-                    </div>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
+    render_compromiso_info(client, compromiso_id, row=row, lineas=lineas)
 
 
 def render_dashboard(client: Client) -> None:

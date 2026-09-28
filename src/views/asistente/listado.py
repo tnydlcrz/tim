@@ -3,6 +3,8 @@ from supabase import Client
 
 from src.services import compromisos
 from src.ui import render_compromiso_row_compact, rerun_app, row_text
+from src.views.asistente.formulario import open_asist_form_new
+from src.views.compromiso_detalle import render_compromiso_info
 
 ASIST_LIST_SCROLL_HEIGHT = 520
 
@@ -106,9 +108,38 @@ def _listado_lista_fragment(df) -> None:
     _render_lista_scroll(lista)
 
 
+def _render_post_guardado(client: Client) -> None:
+    saved_id = st.session_state.get("asist_saved_id")
+    if not saved_id:
+        return
+
+    st.subheader("Compromiso guardado")
+    cn, ce, cl = st.columns([2, 1, 1])
+    with cn:
+        if st.button("+ Nuevo compromiso", type="primary", key="asist_post_nuevo", use_container_width=True):
+            open_asist_form_new(return_to="Listado")
+            rerun_app()
+    with ce:
+        if st.button("Editar", key="asist_post_editar", use_container_width=True):
+            st.session_state.pop("asist_saved_id", None)
+            st.session_state.edit_compromiso_id = saved_id
+            st.session_state.form_return_to = "Listado"
+            st.session_state._nav_formulario = True
+            st.session_state._nav_asistente_page = "Formulario"
+            rerun_app()
+    with cl:
+        if st.button("Ocultar detalle", key="asist_post_ocultar", use_container_width=True):
+            st.session_state.pop("asist_saved_id", None)
+            rerun_app()
+
+    if render_compromiso_info(client, saved_id):
+        st.markdown("---")
+
+
 def render_listado(client: Client) -> None:
     if msg := st.session_state.pop("_flash_msg", None):
         st.success(msg)
+    _render_post_guardado(client)
     st.subheader("Listado de compromisos")
     df = compromisos.fetch_panel(client, incluir_inactivos=True)
     if df.empty:
