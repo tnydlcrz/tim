@@ -277,7 +277,10 @@ SEARCH_COLUMNS = (
     "estado_display",
 )
 
+DEFAULT_SORT_LABEL = "Últimos actualizados"
+
 SORT_OPTIONS = {
+    DEFAULT_SORT_LABEL: ("updated_at", False),
     "Prioridad (urgente primero)": ("prioridad", True),
     "Prioridad (baja primero)": ("prioridad", False),
     "Avance (menor primero)": ("avance_pct", True),
@@ -307,11 +310,19 @@ def filter_search(df: pd.DataFrame, query: str) -> pd.DataFrame:
 def sort_panel(df: pd.DataFrame, sort_label: str) -> pd.DataFrame:
     if df.empty:
         return df
-    field, ascending = SORT_OPTIONS.get(sort_label, ("prioridad", True))
+    field, ascending = SORT_OPTIONS.get(sort_label, ("updated_at", False))
     out = df.copy()
     if field == "prioridad":
         out["_sort_pri"] = out["prioridad"].map(_PRIORIDAD_ORDEN).fillna(99)
         return out.sort_values("_sort_pri", ascending=ascending).drop(columns="_sort_pri")
+    if field == "updated_at":
+        out["_sort_ts"] = pd.to_datetime(out["updated_at"], errors="coerce")
+        if "created_at" in out.columns:
+            created = pd.to_datetime(out["created_at"], errors="coerce")
+            out["_sort_ts"] = out["_sort_ts"].fillna(created)
+        return out.sort_values("_sort_ts", ascending=ascending, na_position="last").drop(
+            columns="_sort_ts"
+        )
     if field in ("fecha_inicio", "avance_pct", "titulo", "categoria", "ubicacion_display"):
         return out.sort_values(field, ascending=ascending, na_position="last")
     return out

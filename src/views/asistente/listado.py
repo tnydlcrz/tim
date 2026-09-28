@@ -82,10 +82,11 @@ def _listado_lista_fragment(df) -> None:
         )
     with c2:
         st.markdown('<span class="exec-toolbar-label">Ordenar por</span>', unsafe_allow_html=True)
+        sort_labels = list(compromisos.SORT_OPTIONS.keys())
         sort = st.selectbox(
             "Ordenar compromisos",
-            list(compromisos.SORT_OPTIONS.keys()),
-            index=0,
+            sort_labels,
+            index=sort_labels.index(compromisos.DEFAULT_SORT_LABEL),
             key="asist_sort",
             label_visibility="collapsed",
         )
