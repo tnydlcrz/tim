@@ -439,6 +439,7 @@ def render_formulario(client: Client, edit_id: str | None = None, modo: str = "a
         st.caption("Desmarcá «Evento programado» para cancelar el evento.")
 
     estado_sin_iniciar_id = catalogos.id_por_nombre(cats["estados"], "Sin iniciar")
+    ex = existing or {}
 
     if "lineas_form" not in st.session_state or st.session_state.get("_form_edit") != edit_id:
         if lineas_existing:
@@ -457,7 +458,6 @@ def render_formulario(client: Client, edit_id: str | None = None, modo: str = "a
         st.session_state._form_edit = edit_id
         st.session_state[_form_key("activo", edit_id)] = bool(ex.get("activo", True))
 
-    ex = existing or {}
     default_rep = ex.get("reparticion_id") or catalogos.id_por_nombre(
         cats["reparticiones"], "Ministerio de Salud"
     )
