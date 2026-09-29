@@ -251,7 +251,7 @@ def _render_agenda_detalle(
         default_fi = compromisos.hoy_ar()
     hora_prev = compromisos.parse_hora(ex.get("hora_inicio"))
 
-    c_ev, c_fecha_cb, c_hora_cb = st.columns(3, vertical_alignment="center")
+    c_ev, c_fecha_cb, c_hora_cb, c_persona = st.columns([1, 1, 1, 2], vertical_alignment="top")
     with c_ev:
         st.checkbox("Evento programado", key=activo_key, help=activo_help)
     with c_fecha_cb:
@@ -267,31 +267,32 @@ def _render_agenda_detalle(
             value=hora_prev is not None,
             key=_form_key("con_hora", edit_id),
         )
-
-    fecha_inicio = None
-    hora_inicio = None
-    c_fecha, c_persona, c_hora = st.columns(3)
-    with c_fecha:
-        if con_fecha:
-            fecha_inicio = st.date_input(
-                "Fecha del evento",
-                value=default_fi or compromisos.hoy_ar(),
-                format="DD/MM/YYYY",
-                key=_form_key("fi", edit_id),
-            )
     with c_persona:
         persona_sol = st.text_input(
             "Persona / contacto",
             value=ex.get("persona_solicitante", "") or "",
             key=_form_key("ps", edit_id),
         )
-    with c_hora:
-        if con_hora:
-            hora_inicio = st.time_input(
-                "Hora",
-                value=hora_prev or time(9, 0),
-                key=_form_key("hi", edit_id),
-            )
+
+    fecha_inicio = None
+    hora_inicio = None
+    if con_fecha or con_hora:
+        c_fecha, c_hora = st.columns(2)
+        with c_fecha:
+            if con_fecha:
+                fecha_inicio = st.date_input(
+                    "Fecha del evento",
+                    value=default_fi or compromisos.hoy_ar(),
+                    format="DD/MM/YYYY",
+                    key=_form_key("fi", edit_id),
+                )
+        with c_hora:
+            if con_hora:
+                hora_inicio = st.time_input(
+                    "Hora",
+                    value=hora_prev or time(9, 0),
+                    key=_form_key("hi", edit_id),
+                )
 
     return fecha_inicio, hora_inicio, persona_sol
 
