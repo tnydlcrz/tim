@@ -271,19 +271,23 @@ def _render_agenda_detalle(
     fecha_inicio = None
     hora_inicio = None
     with c_fecha_hora:
-        if con_fecha:
-            fecha_inicio = st.date_input(
-                "Fecha del evento",
-                value=default_fi or compromisos.hoy_ar(),
-                format="DD/MM/YYYY",
-                key=_form_key("fi", edit_id),
-            )
-        if con_hora:
-            hora_inicio = st.time_input(
-                "Hora",
-                value=hora_prev or time(9, 0),
-                key=_form_key("hi", edit_id),
-            )
+        if con_fecha or con_hora:
+            c_f, c_h = st.columns([1.05, 1], vertical_alignment="top")
+            with c_f:
+                if con_fecha:
+                    fecha_inicio = st.date_input(
+                        "Fecha del evento",
+                        value=default_fi or compromisos.hoy_ar(),
+                        format="DD/MM/YYYY",
+                        key=_form_key("fi", edit_id),
+                    )
+            with c_h:
+                if con_hora:
+                    hora_inicio = st.time_input(
+                        "Hora",
+                        value=hora_prev or time(9, 0),
+                        key=_form_key("hi", edit_id),
+                    )
 
     return fecha_inicio, hora_inicio
 
