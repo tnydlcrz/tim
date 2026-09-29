@@ -14,6 +14,10 @@ _AMBITO_HELP = (
     "El ámbito (Ministerial, Operativo, Sin clasificar, etc.) se asigna "
     "automáticamente según la categoría y la subcategoría."
 )
+_AGENDA_EVENTO_HELP = (
+    "Evento de una sola vez: fecha y horario opcionales. "
+    "Si no se cancela, se asume que se realizó."
+)
 
 
 def _form_key(field: str, edit_id: str | None) -> str:
@@ -239,21 +243,30 @@ def _render_agenda_detalle(
 ) -> tuple[date | None, time | None, str]:
     """Fecha, hora y contacto de agenda (fuera del form para checkboxes reactivos)."""
     section_title("Detalle del evento")
-    st.caption(
-        "Evento de una sola vez: fecha y horario opcionales. "
-        "Si no se cancela, se asume que se realizó."
-    )
-    c10, c11 = st.columns(2)
-    with c10:
-        default_fi = _parse_date(ex.get("fecha_inicio"))
-        if not edit_id and default_fi is None:
-            default_fi = compromisos.hoy_ar()
+    default_fi = _parse_date(ex.get("fecha_inicio"))
+    if not edit_id and default_fi is None:
+        default_fi = compromisos.hoy_ar()
+    hora_prev = compromisos.parse_hora(ex.get("hora_inicio"))
+
+    c_cb1, c_cb2 = st.columns(2)
+    with c_cb1:
         con_fecha = st.checkbox(
             "Asignar fecha",
             value=default_fi is not None,
             key=_form_key("con_fecha", edit_id),
+            help=_AGENDA_EVENTO_HELP,
         )
-        fecha_inicio = None
+    with c_cb2:
+        con_hora = st.checkbox(
+            "Definir horario",
+            value=hora_prev is not None,
+            key=_form_key("con_hora", edit_id),
+        )
+
+    fecha_inicio = None
+    hora_inicio = None
+    c_fecha, c_persona = st.columns(2)
+    with c_fecha:
         if con_fecha:
             fecha_inicio = st.date_input(
                 "Fecha del evento",
@@ -261,25 +274,22 @@ def _render_agenda_detalle(
                 format="DD/MM/YYYY",
                 key=_form_key("fi", edit_id),
             )
-    with c11:
-        hora_prev = compromisos.parse_hora(ex.get("hora_inicio"))
-        con_hora = st.checkbox(
-            "Definir horario",
-            value=hora_prev is not None,
-            key=_form_key("con_hora", edit_id),
+    with c_persona:
+        persona_sol = st.text_input(
+            "Persona / contacto",
+            value=ex.get("persona_solicitante", "") or "",
+            key=_form_key("ps", edit_id),
         )
-        hora_inicio = None
-        if con_hora:
+
+    if con_hora:
+        c_hora, _ = st.columns(2)
+        with c_hora:
             hora_inicio = st.time_input(
                 "Hora",
                 value=hora_prev or time(9, 0),
                 key=_form_key("hi", edit_id),
             )
-    persona_sol = st.text_input(
-        "Persona / contacto",
-        value=ex.get("persona_solicitante", "") or "",
-        key=_form_key("ps", edit_id),
-    )
+
     return fecha_inicio, hora_inicio, persona_sol
 
 
