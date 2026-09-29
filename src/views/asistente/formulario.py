@@ -79,9 +79,62 @@ def open_asist_form_new(*, return_to: str = "Listado") -> None:
     st.session_state.pop("form_solo_agenda", None)
     st.session_state.pop("lineas_form", None)
     st.session_state.pop("_form_edit", None)
+    st.session_state.pop(_form_key("activo", None), None)
     st.session_state.form_return_to = return_to
     st.session_state._nav_formulario = True
     st.session_state._nav_asistente_page = "Formulario"
+
+
+def _render_linea_form_row(
+    ln: dict,
+    line_no: int,
+    *,
+    estado_ids: list[str],
+    estado_labels: list[str],
+    avance_opts: list[int],
+    allow_delete: bool,
+) -> bool:
+    """Una fila de línea de compromiso dentro del form. Devuelve True si pidió eliminar."""
+    uid = ln["uid"]
+    lh, la = st.columns([5, 1])
+    with lh:
+        st.markdown(f'<p class="linea-label">Línea {line_no}</p>', unsafe_allow_html=True)
+    with la:
+        if allow_delete and st.form_submit_button(
+            "Eliminar",
+            key=f"del_{uid}",
+            use_container_width=True,
+        ):
+            return True
+    st.text_input(
+        "Descripción",
+        value=ln.get("descripcion", ""),
+        key=f"ld_{uid}",
+        placeholder="Opcional (si está vacía, se usa el título)",
+    )
+    ce, ca = st.columns(2)
+    with ce:
+        eidx = 0
+        if ln.get("estado_id") in estado_ids:
+            eidx = estado_ids.index(ln["estado_id"])
+        st.selectbox(
+            "Estado *",
+            range(len(estado_labels)),
+            index=eidx,
+            format_func=lambda x, lbls=estado_labels: lbls[x],
+            key=f"le_{uid}",
+        )
+    with ca:
+        avance_val = compromisos.normalizar_avance(ln.get("avance_pct"))
+        aidx = avance_opts.index(avance_val) if avance_val in avance_opts else 0
+        st.selectbox(
+            "Avance *",
+            range(len(avance_opts)),
+            index=aidx,
+            format_func=lambda x, opts=avance_opts: f"{opts[x]}%",
+            key=f"la_{uid}",
+        )
+    return False
 
 def _parse_date(value: object | None) -> date | None:
     if not value:
@@ -402,6 +455,7 @@ def render_formulario(client: Client, edit_id: str | None = None, modo: str = "a
         else:
             st.session_state.lineas_form = [_linea_blank(estado_id=estado_sin_iniciar_id)]
         st.session_state._form_edit = edit_id
+        st.session_state[_form_key("activo", edit_id)] = bool(ex.get("activo", True))
 
     ex = existing or {}
     default_rep = ex.get("reparticion_id") or catalogos.id_por_nombre(
@@ -410,6 +464,15 @@ def render_formulario(client: Client, edit_id: str | None = None, modo: str = "a
     default_loc = ex.get("localidad_id") or catalogos.id_por_nombre(cats["localidades"], "Corrientes")
 
     with st.container(height=FORM_SCROLL_HEIGHT, border=True):
+        section_title("Cabecera")
+        st.text_input(
+            "Título del compromiso *",
+            value=ex.get("titulo", ""),
+            key=_form_key("titulo", edit_id),
+        )
+
+        rep_id, loc_id, est_id = _render_ubicacion(cats, ex, edit_id, default_rep, default_loc)
+
         section_title("Clasificación")
         pri_id, cat_id, sub_id, amb_id = _render_clasificacion(
             client,
@@ -422,14 +485,17 @@ def render_formulario(client: Client, edit_id: str | None = None, modo: str = "a
         cat_nombre = catalogos.nombre_por_id(cats["categorias"], cat_id)
         es_agenda = cat_nombre == compromisos.AGENDA_CATEGORIA
 
-        rep_id, loc_id, est_id = _render_ubicacion(cats, ex, edit_id, default_rep, default_loc)
-
-        section_title("Cabecera")
-        st.text_input(
-            "Título del compromiso *",
-            value=ex.get("titulo", ""),
-            key=_form_key("titulo", edit_id),
+        activo_key = _form_key("activo", edit_id)
+        activo_label = "Evento programado" if es_agenda else "Activo"
+        activo_help = (
+            "Desmarcá «Evento programado» para cancelar el evento."
+            if es_agenda
+            else "Desmarcar solo si el compromiso ya no aplica."
         )
+        st.checkbox(activo_label, key=activo_key, help=activo_help)
+
+        if not es_agenda and cat_nombre in ("Obras", "Equipamiento", "Nombramiento") and not est_id:
+            st.warning("Se recomienda indicar establecimiento para esta categoría.")
 
         fecha_inicio: date | None = None
         fecha_fin: date | None = None
@@ -443,132 +509,112 @@ def render_formulario(client: Client, edit_id: str | None = None, modo: str = "a
         if es_agenda:
             fecha_inicio, hora_inicio, persona_sol = _render_agenda_detalle(ex, edit_id)
 
+        lineas_ui = st.session_state.lineas_form
+        estados_map = catalogos.catalogo_map(cats["estados"], include_empty=False)
+        estado_ids = list(estados_map.keys())
+        estado_labels = list(estados_map.values())
+        avance_opts = list(compromisos.AVANCE_NIVELES)
+
         with st.form("compromiso_form", clear_on_submit=not edit_id):
-            if not es_agenda:
-                c7, c8 = st.columns(2)
-                with c7:
-                    srv_id = _select_catalog(
-                        "Servicio",
-                        cats["servicios"],
-                        _form_key("srv", edit_id),
-                        default_id=ex.get("servicio_id"),
-                    )
-                with c8:
-                    area_id = _select_catalog(
-                        "Área / Sector",
-                        cats["areas"],
-                        _form_key("area", edit_id),
-                        default_id=ex.get("area_id"),
-                    )
-
-            activo = st.checkbox(
-                "Evento programado" if es_agenda else "Activo",
-                value=ex.get("activo", True),
-                help="Desmarcá «Evento programado» para cancelar el evento." if es_agenda else None,
-            )
-
-            if not es_agenda and cat_nombre in ("Obras", "Equipamiento", "Nombramiento") and not est_id:
-                st.warning("Se recomienda indicar establecimiento para esta categoría.")
+            delete_uid: str | None = None
+            add_line = False
 
             if not es_agenda:
-                section_title("Detalle operativo")
-                c10, c11 = st.columns(2)
-                with c10:
-                    fecha_inicio = st.date_input(
-                        "Fecha inicio",
-                        value=_parse_date(ex.get("fecha_inicio")),
-                        format="DD/MM/YYYY",
-                        key=_form_key("fi", edit_id),
-                    )
-                with c11:
-                    fecha_fin = st.date_input(
-                        "Fecha fin",
-                        value=_parse_date(ex.get("fecha_fin")),
-                        format="DD/MM/YYYY",
-                        key=_form_key("ff", edit_id),
-                    )
-                c12, c13, c14 = st.columns(3)
-                with c12:
-                    persona_sol = st.text_input(
-                        "Persona solicitante",
-                        value=ex.get("persona_solicitante", "") or "",
-                        key=_form_key("ps", edit_id),
-                    )
-                with c13:
-                    numero_expte = st.text_input(
-                        "Número de expediente",
-                        value=ex.get("numero_expte", "") or "",
-                        key=_form_key("nex", edit_id),
-                    )
-                with c14:
-                    empresa = st.text_input(
-                        "Empresa",
-                        value=ex.get("empresa", "") or "",
-                        key=_form_key("emp", edit_id),
-                    )
-
-            if not es_agenda:
-                section_title("Líneas de compromiso")
                 st.caption(
-                    "Estado y avance por línea. La descripción es opcional: si la dejás vacía, "
-                    "se guarda con el mismo texto del título."
+                    "Seguimiento principal (por defecto «Sin iniciar»). "
+                    "La descripción es opcional; si está vacía, se usa el título."
                 )
-
-            if not es_agenda:
-                estados_map = catalogos.catalogo_map(cats["estados"], include_empty=False)
-                estado_ids = list(estados_map.keys())
-                estado_labels = list(estados_map.values())
-                avance_opts = list(compromisos.AVANCE_NIVELES)
-                lineas_ui = st.session_state.lineas_form
-                delete_uid: str | None = None
-
-                for i, ln in enumerate(lineas_ui):
-                    uid = ln["uid"]
-                    lh, la = st.columns([5, 1])
-                    with lh:
-                        st.markdown(f'<p class="linea-label">Línea {i + 1}</p>', unsafe_allow_html=True)
-                    with la:
-                        if len(lineas_ui) > 1 and st.form_submit_button(
-                            "Eliminar",
-                            key=f"del_{uid}",
-                            use_container_width=True,
-                        ):
-                            delete_uid = uid
-
-                    desc = st.text_input(
-                        "Descripción",
-                        value=ln.get("descripcion", ""),
-                        key=f"ld_{uid}",
-                        placeholder="Opcional (si está vacía, se usa el título)",
+                if lineas_ui:
+                    _render_linea_form_row(
+                        lineas_ui[0],
+                        1,
+                        estado_ids=estado_ids,
+                        estado_labels=estado_labels,
+                        avance_opts=avance_opts,
+                        allow_delete=False,
                     )
-                    ce, ca = st.columns(2)
-                    with ce:
-                        eidx = 0
-                        if ln.get("estado_id") in estado_ids:
-                            eidx = estado_ids.index(ln["estado_id"])
-                        st.selectbox(
-                            "Estado *",
-                            range(len(estado_labels)),
-                            index=eidx,
-                            format_func=lambda x, lbls=estado_labels: lbls[x],
-                            key=f"le_{uid}",
-                        )
-                    with ca:
-                        avance_val = compromisos.normalizar_avance(ln.get("avance_pct"))
-                        aidx = avance_opts.index(avance_val) if avance_val in avance_opts else 0
-                        st.selectbox(
-                            "Avance *",
-                            range(len(avance_opts)),
-                            index=aidx,
-                            format_func=lambda x, opts=avance_opts: f"{opts[x]}%",
-                            key=f"la_{uid}",
-                        )
-                    ln["descripcion"] = desc
 
-                add_line = st.form_submit_button("+ Agregar otra línea", type="secondary")
-            else:
-                delete_uid = None
-                add_line = False
+                tiene_extra = len(lineas_ui) > 1 or any(
+                    [
+                        ex.get("servicio_id"),
+                        ex.get("area_id"),
+                        ex.get("fecha_inicio"),
+                        ex.get("fecha_fin"),
+                        ex.get("persona_solicitante"),
+                        ex.get("numero_expte"),
+                        ex.get("empresa"),
+                    ]
+                )
+                with st.expander(
+                    "Detalle adicional (servicio, fechas, más líneas…)",
+                    expanded=bool(edit_id and tiene_extra),
+                ):
+                    c7, c8 = st.columns(2)
+                    with c7:
+                        srv_id = _select_catalog(
+                            "Servicio",
+                            cats["servicios"],
+                            _form_key("srv", edit_id),
+                            default_id=ex.get("servicio_id"),
+                        )
+                    with c8:
+                        area_id = _select_catalog(
+                            "Área / Sector",
+                            cats["areas"],
+                            _form_key("area", edit_id),
+                            default_id=ex.get("area_id"),
+                        )
+
+                    section_title("Detalle operativo")
+                    c10, c11 = st.columns(2)
+                    with c10:
+                        fecha_inicio = st.date_input(
+                            "Fecha inicio",
+                            value=_parse_date(ex.get("fecha_inicio")),
+                            format="DD/MM/YYYY",
+                            key=_form_key("fi", edit_id),
+                        )
+                    with c11:
+                        fecha_fin = st.date_input(
+                            "Fecha fin",
+                            value=_parse_date(ex.get("fecha_fin")),
+                            format="DD/MM/YYYY",
+                            key=_form_key("ff", edit_id),
+                        )
+                    c12, c13, c14 = st.columns(3)
+                    with c12:
+                        persona_sol = st.text_input(
+                            "Persona solicitante",
+                            value=ex.get("persona_solicitante", "") or "",
+                            key=_form_key("ps", edit_id),
+                        )
+                    with c13:
+                        numero_expte = st.text_input(
+                            "Número de expediente",
+                            value=ex.get("numero_expte", "") or "",
+                            key=_form_key("nex", edit_id),
+                        )
+                    with c14:
+                        empresa = st.text_input(
+                            "Empresa",
+                            value=ex.get("empresa", "") or "",
+                            key=_form_key("emp", edit_id),
+                        )
+
+                    if len(lineas_ui) > 1:
+                        section_title("Líneas adicionales")
+                        for i, ln in enumerate(lineas_ui[1:], start=2):
+                            if _render_linea_form_row(
+                                ln,
+                                i,
+                                estado_ids=estado_ids,
+                                estado_labels=estado_labels,
+                                avance_opts=avance_opts,
+                                allow_delete=True,
+                            ):
+                                delete_uid = ln["uid"]
+
+                    add_line = st.form_submit_button("+ Agregar otra línea", type="secondary")
 
             c_save, c_cancel = st.columns(2)
             with c_save:
@@ -597,6 +643,7 @@ def render_formulario(client: Client, edit_id: str | None = None, modo: str = "a
 
             if save:
                 titulo_guardar = (st.session_state.get(_form_key("titulo", edit_id)) or "").strip()
+                activo = bool(st.session_state.get(activo_key, True))
                 if es_agenda:
                     estado_id = catalogos.id_por_nombre(cats["estados"], "Sin iniciar")
                     if not estado_id and cats["estados"]:
