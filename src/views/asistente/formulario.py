@@ -518,8 +518,30 @@ def render_formulario(client: Client, edit_id: str | None = None, modo: str = "a
         with st.form("compromiso_form", clear_on_submit=not edit_id):
             delete_uid: str | None = None
             add_line = False
+            save_label = "Guardar evento" if es_agenda else "Guardar compromiso"
+            edit_suffix = edit_id or "new"
+
+            ct_save, ct_cancel = st.columns(2)
+            with ct_save:
+                save_top = st.form_submit_button(
+                    save_label,
+                    type="primary",
+                    use_container_width=True,
+                    key=f"save_top_{edit_suffix}",
+                )
+            with ct_cancel:
+                cancel_top = st.form_submit_button(
+                    "Cancelar",
+                    type="secondary",
+                    use_container_width=True,
+                    key=f"cancel_top_{edit_suffix}",
+                )
+
+            save = False
+            cancel = False
 
             if not es_agenda:
+                st.divider()
                 st.caption(
                     "Seguimiento principal (por defecto «Sin iniciar»). "
                     "La descripción es opcional; si está vacía, se usa el título."
@@ -616,14 +638,23 @@ def render_formulario(client: Client, edit_id: str | None = None, modo: str = "a
 
                     add_line = st.form_submit_button("+ Agregar otra línea", type="secondary")
 
-            c_save, c_cancel = st.columns(2)
-            with c_save:
-                save_label = "Guardar evento" if es_agenda else "Guardar compromiso"
-                save = st.form_submit_button(save_label, type="primary", use_container_width=True)
-            with c_cancel:
-                cancel = st.form_submit_button("Cancelar", type="secondary", use_container_width=True)
+                c_save, c_cancel = st.columns(2)
+                with c_save:
+                    save = st.form_submit_button(
+                        save_label,
+                        type="primary",
+                        use_container_width=True,
+                        key=f"save_bottom_{edit_suffix}",
+                    )
+                with c_cancel:
+                    cancel = st.form_submit_button(
+                        "Cancelar",
+                        type="secondary",
+                        use_container_width=True,
+                        key=f"cancel_bottom_{edit_suffix}",
+                    )
 
-            if cancel:
+            if cancel or cancel_top:
                 _cancelar_formulario(modo)
                 st.rerun()
 
@@ -641,7 +672,7 @@ def render_formulario(client: Client, edit_id: str | None = None, modo: str = "a
                 st.session_state.lineas_form.append(_linea_blank(estado_id=estado_sin_iniciar_id))
                 st.rerun()
 
-            if save:
+            if save or save_top:
                 titulo_guardar = (st.session_state.get(_form_key("titulo", edit_id)) or "").strip()
                 activo = bool(st.session_state.get(activo_key, True))
                 if es_agenda:
