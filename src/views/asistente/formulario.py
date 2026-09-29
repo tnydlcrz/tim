@@ -459,9 +459,6 @@ def render_formulario(client: Client, edit_id: str | None = None, modo: str = "a
             _cancelar_formulario(modo)
             st.rerun()
 
-    if solo_agenda and edit_id:
-        st.caption("Desmarcá «Evento programado» para cancelar el evento.")
-
     estado_sin_iniciar_id = catalogos.id_por_nombre(cats["estados"], "Sin iniciar")
     ex = existing or {}
 
