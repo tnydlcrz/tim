@@ -244,14 +244,14 @@ def _render_agenda_detalle(
     *,
     activo_key: str,
     activo_help: str,
-) -> tuple[date | None, time | None, str]:
-    """Evento programado, fecha/hora opcionales y contacto (fuera del form, checkboxes reactivos)."""
+) -> tuple[date | None, time | None]:
+    """Evento programado y fecha/hora opcionales (fuera del form, checkboxes reactivos)."""
     default_fi = _parse_date(ex.get("fecha_inicio"))
     if not edit_id and default_fi is None:
         default_fi = compromisos.hoy_ar()
     hora_prev = compromisos.parse_hora(ex.get("hora_inicio"))
 
-    c_ev, c_fecha_cb, c_hora_cb, c_persona = st.columns([1, 1, 1, 2], vertical_alignment="top")
+    c_ev, c_fecha_cb, c_hora_cb, c_fecha_hora = st.columns([1, 1, 1, 2], vertical_alignment="top")
     with c_ev:
         st.checkbox("Evento programado", key=activo_key, help=activo_help)
     with c_fecha_cb:
@@ -267,34 +267,25 @@ def _render_agenda_detalle(
             value=hora_prev is not None,
             key=_form_key("con_hora", edit_id),
         )
-    with c_persona:
-        persona_sol = st.text_input(
-            "Persona / contacto",
-            value=ex.get("persona_solicitante", "") or "",
-            key=_form_key("ps", edit_id),
-        )
 
     fecha_inicio = None
     hora_inicio = None
-    if con_fecha or con_hora:
-        c_fecha, c_hora = st.columns(2)
-        with c_fecha:
-            if con_fecha:
-                fecha_inicio = st.date_input(
-                    "Fecha del evento",
-                    value=default_fi or compromisos.hoy_ar(),
-                    format="DD/MM/YYYY",
-                    key=_form_key("fi", edit_id),
-                )
-        with c_hora:
-            if con_hora:
-                hora_inicio = st.time_input(
-                    "Hora",
-                    value=hora_prev or time(9, 0),
-                    key=_form_key("hi", edit_id),
-                )
+    with c_fecha_hora:
+        if con_fecha:
+            fecha_inicio = st.date_input(
+                "Fecha del evento",
+                value=default_fi or compromisos.hoy_ar(),
+                format="DD/MM/YYYY",
+                key=_form_key("fi", edit_id),
+            )
+        if con_hora:
+            hora_inicio = st.time_input(
+                "Hora",
+                value=hora_prev or time(9, 0),
+                key=_form_key("hi", edit_id),
+            )
 
-    return fecha_inicio, hora_inicio, persona_sol
+    return fecha_inicio, hora_inicio
 
 
 def _categorias_para_formulario(
@@ -486,11 +477,26 @@ def render_formulario(client: Client, edit_id: str | None = None, modo: str = "a
 
     with st.container(height=FORM_SCROLL_HEIGHT, border=True):
         st.markdown('<div class="form-scroll-panel-marker"></div>', unsafe_allow_html=True)
-        st.text_input(
-            "Título del compromiso *",
-            value=ex.get("titulo", ""),
-            key=_form_key("titulo", edit_id),
-        )
+        if solo_agenda:
+            c_titulo, c_persona = st.columns([4, 1.35])
+            with c_titulo:
+                st.text_input(
+                    "Título del compromiso *",
+                    value=ex.get("titulo", ""),
+                    key=_form_key("titulo", edit_id),
+                )
+            with c_persona:
+                st.text_input(
+                    "Persona / contacto",
+                    value=ex.get("persona_solicitante", "") or "",
+                    key=_form_key("ps", edit_id),
+                )
+        else:
+            st.text_input(
+                "Título del compromiso *",
+                value=ex.get("titulo", ""),
+                key=_form_key("titulo", edit_id),
+            )
 
         rep_id, loc_id, est_id = _render_ubicacion(cats, ex, edit_id, default_rep, default_loc)
 
@@ -528,12 +534,13 @@ def render_formulario(client: Client, edit_id: str | None = None, modo: str = "a
         area_id: str | None = None
 
         if es_agenda:
-            fecha_inicio, hora_inicio, persona_sol = _render_agenda_detalle(
+            fecha_inicio, hora_inicio = _render_agenda_detalle(
                 ex,
                 edit_id,
                 activo_key=activo_key,
                 activo_help=activo_help,
             )
+            persona_sol = (st.session_state.get(_form_key("ps", edit_id)) or "").strip()
 
         lineas_ui = st.session_state.lineas_form
         estados_map = catalogos.catalogo_map(cats["estados"], include_empty=False)
