@@ -10,6 +10,10 @@ from src.services import catalogos, compromisos
 from src.ui import section_title
 
 FORM_SCROLL_HEIGHT = 580
+_AMBITO_HELP = (
+    "El ámbito (Ministerial, Operativo, Sin clasificar, etc.) se asigna "
+    "automáticamente según la categoría y la subcategoría."
+)
 
 
 def _form_key(field: str, edit_id: str | None) -> str:
@@ -150,6 +154,7 @@ def _select_catalog(
     key: str,
     required: bool = False,
     default_id: str | None = None,
+    help: str | None = None,
 ) -> str | None:
     options = catalogos.catalogo_map(items, include_empty=not required)
     ids = list(options.keys())
@@ -168,6 +173,7 @@ def _select_catalog(
         range(len(labels)),
         format_func=lambda i, lbls=labels: lbls[i],
         key=key,
+        help=help,
     )
     val = ids[idx]
     return val if val else None
@@ -323,6 +329,7 @@ def _render_clasificacion(
                 [cat["nombre"]],
                 disabled=True,
                 key=_form_key("cat_agenda_locked", edit_id),
+                help=_AMBITO_HELP,
             )
             cat_id = cat["id"]
         elif categorias:
@@ -332,6 +339,7 @@ def _render_clasificacion(
                 _form_key("cat", edit_id),
                 required=True,
                 default_id=ex.get("categoria_id"),
+                help=_AMBITO_HELP,
             )
         else:
             st.error("No hay categorías disponibles para este formulario.")
@@ -356,8 +364,6 @@ def _render_clasificacion(
             )
 
     amb_id = catalogos.resolve_ambito_id(cats["categorias"], subcats, cat_id, sub_id)
-    amb_nombre = catalogos.nombre_por_id(cats["ambitos"], amb_id) if amb_id else "—"
-    st.caption(f"Ámbito: {amb_nombre} (según categoría / subcategoría)")
     return pri_id, cat_id, sub_id, amb_id
 
 
@@ -419,9 +425,9 @@ def render_formulario(client: Client, edit_id: str | None = None, modo: str = "a
     solo_agenda = bool(st.session_state.get("form_solo_agenda"))
 
     if solo_agenda:
-        st.subheader("Editar evento de agenda" if edit_id else "Nuevo evento de agenda")
+        titulo_pagina = "Editar evento de agenda" if edit_id else "Nuevo evento de agenda"
     else:
-        st.subheader("Editar compromiso" if edit_id else "Nuevo compromiso")
+        titulo_pagina = "Editar compromiso" if edit_id else "Nuevo compromiso"
     cancel_label = (
         "← Cancelar y volver"
         if modo == "ejecutivo"
@@ -431,9 +437,13 @@ def render_formulario(client: Client, edit_id: str | None = None, modo: str = "a
             else "← Cancelar y volver al listado"
         )
     )
-    if st.button(cancel_label, key="form_cancel_top"):
-        _cancelar_formulario(modo)
-        st.rerun()
+    th1, th2 = st.columns([4, 1.6], vertical_alignment="center")
+    with th1:
+        st.subheader(titulo_pagina)
+    with th2:
+        if st.button(cancel_label, key="form_cancel_top", use_container_width=True):
+            _cancelar_formulario(modo)
+            st.rerun()
 
     if solo_agenda and edit_id:
         st.caption("Desmarcá «Evento programado» para cancelar el evento.")
