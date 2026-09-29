@@ -101,19 +101,21 @@ def _render_linea_form_row(
     estado_labels: list[str],
     avance_opts: list[int],
     allow_delete: bool,
+    show_header: bool = True,
 ) -> bool:
     """Una fila de línea de compromiso dentro del form. Devuelve True si pidió eliminar."""
     uid = ln["uid"]
-    lh, la = st.columns([5, 1])
-    with lh:
-        st.markdown(f'<p class="linea-label">Línea {line_no}</p>', unsafe_allow_html=True)
-    with la:
-        if allow_delete and st.form_submit_button(
-            "Eliminar",
-            key=f"del_{uid}",
-            use_container_width=True,
-        ):
-            return True
+    if show_header:
+        lh, la = st.columns([5, 1])
+        with lh:
+            st.markdown(f'<p class="linea-label">Línea {line_no}</p>', unsafe_allow_html=True)
+        with la:
+            if allow_delete and st.form_submit_button(
+                "Eliminar",
+                key=f"del_{uid}",
+                use_container_width=True,
+            ):
+                return True
     st.text_input(
         "Descripción",
         value=ln.get("descripcion", ""),
@@ -239,22 +241,27 @@ def _render_ubicacion(
 def _render_agenda_detalle(
     ex: dict,
     edit_id: str | None,
+    *,
+    activo_key: str,
+    activo_help: str,
 ) -> tuple[date | None, time | None, str]:
-    """Fecha, hora y contacto de agenda (fuera del form para checkboxes reactivos)."""
+    """Evento programado, fecha/hora opcionales y contacto (fuera del form, checkboxes reactivos)."""
     default_fi = _parse_date(ex.get("fecha_inicio"))
     if not edit_id and default_fi is None:
         default_fi = compromisos.hoy_ar()
     hora_prev = compromisos.parse_hora(ex.get("hora_inicio"))
 
-    c_cb1, c_cb2 = st.columns(2)
-    with c_cb1:
+    c_ev, c_fecha_cb, c_hora_cb = st.columns(3, vertical_alignment="center")
+    with c_ev:
+        st.checkbox("Evento programado", key=activo_key, help=activo_help)
+    with c_fecha_cb:
         con_fecha = st.checkbox(
             "Asignar fecha",
             value=default_fi is not None,
             key=_form_key("con_fecha", edit_id),
             help=_AGENDA_EVENTO_HELP,
         )
-    with c_cb2:
+    with c_hora_cb:
         con_hora = st.checkbox(
             "Definir horario",
             value=hora_prev is not None,
@@ -263,7 +270,7 @@ def _render_agenda_detalle(
 
     fecha_inicio = None
     hora_inicio = None
-    c_fecha, c_persona = st.columns(2)
+    c_fecha, c_persona, c_hora = st.columns(3)
     with c_fecha:
         if con_fecha:
             fecha_inicio = st.date_input(
@@ -278,10 +285,8 @@ def _render_agenda_detalle(
             value=ex.get("persona_solicitante", "") or "",
             key=_form_key("ps", edit_id),
         )
-
-    if con_hora:
-        c_hora, _ = st.columns(2)
-        with c_hora:
+    with c_hora:
+        if con_hora:
             hora_inicio = st.time_input(
                 "Hora",
                 value=hora_prev or time(9, 0),
@@ -509,7 +514,8 @@ def render_formulario(client: Client, edit_id: str | None = None, modo: str = "a
             if es_agenda
             else "Desmarcar solo si el compromiso ya no aplica."
         )
-        st.checkbox(activo_label, key=activo_key, help=activo_help)
+        if not es_agenda:
+            st.checkbox(activo_label, key=activo_key, help=activo_help)
 
         if not es_agenda and cat_nombre in ("Obras", "Equipamiento", "Nombramiento") and not est_id:
             st.warning("Se recomienda indicar establecimiento para esta categoría.")
@@ -524,7 +530,12 @@ def render_formulario(client: Client, edit_id: str | None = None, modo: str = "a
         area_id: str | None = None
 
         if es_agenda:
-            fecha_inicio, hora_inicio, persona_sol = _render_agenda_detalle(ex, edit_id)
+            fecha_inicio, hora_inicio, persona_sol = _render_agenda_detalle(
+                ex,
+                edit_id,
+                activo_key=activo_key,
+                activo_help=activo_help,
+            )
 
         lineas_ui = st.session_state.lineas_form
         estados_map = catalogos.catalogo_map(cats["estados"], include_empty=False)
@@ -558,12 +569,11 @@ def render_formulario(client: Client, edit_id: str | None = None, modo: str = "a
             cancel = False
 
             if not es_agenda:
-                st.divider()
-                st.caption(
-                    "Seguimiento principal (por defecto «Sin iniciar»). "
-                    "La descripción es opcional; si está vacía, se usa el título."
-                )
                 if lineas_ui:
+                    st.caption(
+                        "Seguimiento principal (por defecto «Sin iniciar»). "
+                        "La descripción es opcional; si está vacía, se usa el título."
+                    )
                     _render_linea_form_row(
                         lineas_ui[0],
                         1,
@@ -571,6 +581,7 @@ def render_formulario(client: Client, edit_id: str | None = None, modo: str = "a
                         estado_labels=estado_labels,
                         avance_opts=avance_opts,
                         allow_delete=False,
+                        show_header=False,
                     )
 
                 tiene_extra = len(lineas_ui) > 1 or any(
