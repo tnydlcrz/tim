@@ -199,7 +199,6 @@ def _render_ubicacion(
     default_loc: str | None,
 ) -> tuple[str | None, str | None, str | None]:
     """Repartición, localidad y establecimiento (fuera del form para filtrar sedes)."""
-    section_title("Ubicación")
     c1, c2, c3 = st.columns(3)
     with c1:
         rep_id = _select_catalog(
@@ -242,7 +241,6 @@ def _render_agenda_detalle(
     edit_id: str | None,
 ) -> tuple[date | None, time | None, str]:
     """Fecha, hora y contacto de agenda (fuera del form para checkboxes reactivos)."""
-    section_title("Detalle del evento")
     default_fi = _parse_date(ex.get("fecha_inicio"))
     if not edit_id and default_fi is None:
         default_fi = compromisos.hoy_ar()
@@ -484,7 +482,7 @@ def render_formulario(client: Client, edit_id: str | None = None, modo: str = "a
     default_loc = ex.get("localidad_id") or catalogos.id_por_nombre(cats["localidades"], "Corrientes")
 
     with st.container(height=FORM_SCROLL_HEIGHT, border=True):
-        section_title("Cabecera")
+        st.markdown('<div class="form-scroll-panel-marker"></div>', unsafe_allow_html=True)
         st.text_input(
             "Título del compromiso *",
             value=ex.get("titulo", ""),
@@ -493,7 +491,6 @@ def render_formulario(client: Client, edit_id: str | None = None, modo: str = "a
 
         rep_id, loc_id, est_id = _render_ubicacion(cats, ex, edit_id, default_rep, default_loc)
 
-        section_title("Clasificación")
         pri_id, cat_id, sub_id, amb_id = _render_clasificacion(
             client,
             cats,

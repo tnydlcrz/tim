@@ -272,6 +272,14 @@
     margin-top: 0;
 }
 
+[data-testid="stVerticalBlockBorderWrapper"]:has(.form-scroll-panel-marker) {
+    border-left: 3px solid var(--accent-gold) !important;
+}
+
+.form-scroll-panel-marker {
+    display: none;
+}
+
 .section-hint {
     color: var(--text-muted);
     font-size: 0.875rem;
