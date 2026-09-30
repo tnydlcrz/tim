@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import streamlit as st
 
+from src.views.asistente.formulario import limpiar_ubicacion_formulario_nuevo
+
 TAB_LISTA = "Compromisos"
 TAB_AGENDA = "Agenda"
 
@@ -30,6 +32,7 @@ def open_exec_form_new(*, return_to: str, solo_agenda: bool = False) -> None:
         st.session_state.form_solo_agenda = True
     else:
         st.session_state.pop("form_solo_agenda", None)
+        limpiar_ubicacion_formulario_nuevo()
 
 
 def open_exec_form_edit(compromiso_id: str, *, return_to: str = "detalle") -> None:

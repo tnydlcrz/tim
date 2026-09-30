@@ -3,7 +3,7 @@ import streamlit as st
 from src.auth import handle_auth_error, init_session, is_asistente, is_ejecutivo, logout, require_auth
 from src.supabase_client import get_client
 from src.ui import load_css, render_header
-from src.views.asistente.formulario import render_formulario
+from src.views.asistente.formulario import limpiar_ubicacion_formulario_nuevo, render_formulario
 from src.views.asistente.listado import render_listado
 from src.views.agenda import render_agenda
 from src.views.ejecutivo.dashboard import render_dashboard
@@ -47,6 +47,7 @@ def _render_app(client) -> None:
             st.session_state.pop("edit_compromiso_id", None)
             st.session_state.pop("form_solo_agenda", None)
             st.session_state.pop("form_return_to", None)
+            limpiar_ubicacion_formulario_nuevo()
         st.session_state._asistente_prev_page = page
         edit_id = st.session_state.get("edit_compromiso_id")
         if page == "Listado":

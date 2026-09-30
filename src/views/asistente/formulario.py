@@ -18,6 +18,10 @@ _AGENDA_EVENTO_HELP = (
     "Evento de una sola vez: fecha y horario opcionales. "
     "Si no se cancela, se asume que se realizó."
 )
+_SAVE_OTRO_LABEL = "Guardar y cargar otro para mismo establecimiento"
+_SAVE_OTRO_HELP = (
+    "Guarda y abre un formulario nuevo con la misma repartición, localidad y establecimiento."
+)
 
 
 def _form_key(field: str, edit_id: str | None) -> str:
@@ -81,6 +85,146 @@ def _lineas_validas(lineas_form: list[dict], titulo_fallback: str = "") -> list[
     return valid
 
 
+def _mostrar_guardar_otro_mismo_establecimiento(edit_id: str | None, solo_agenda: bool) -> bool:
+    """Compromisos nuevos (no agenda): siempre ofrecer guardar y abrir otro con misma ubicación."""
+    return not edit_id and not solo_agenda
+
+
+def _purge_linea_widget_keys() -> None:
+    for k in list(st.session_state.keys()):
+        if not isinstance(k, str):
+            continue
+        if k.startswith(("ld_", "le_", "la_", "del_")):
+            st.session_state.pop(k, None)
+
+
+def _asignar_indice_select(
+    key: str,
+    items: list[dict],
+    selected_id: str | None,
+    *,
+    required: bool = False,
+) -> None:
+    options = catalogos.catalogo_map(items, include_empty=not required)
+    ids = list(options.keys())
+    if not selected_id or selected_id not in ids:
+        st.session_state.pop(key, None)
+        return
+    st.session_state[key] = ids.index(selected_id)
+
+
+def _aplicar_ubicacion_preset_formulario_nuevo(cats: dict[str, list[dict]]) -> None:
+    if not st.session_state.pop("form_apply_ubicacion_preset", False):
+        return
+    st.session_state[_form_key("titulo", None)] = ""
+    _purge_linea_widget_keys()
+    preset = st.session_state.get("form_preset_ubicacion") or {}
+    rep_id = preset.get("reparticion_id") or catalogos.id_por_nombre(
+        cats["reparticiones"], "Ministerio de Salud"
+    )
+    loc_id = preset.get("localidad_id") or catalogos.id_por_nombre(cats["localidades"], "Corrientes")
+    est_id = preset.get("establecimiento_id")
+    _asignar_indice_select(
+        _form_key("rep", None),
+        cats["reparticiones"],
+        rep_id,
+        required=True,
+    )
+    _asignar_indice_select(_form_key("loc", None), cats["localidades"], loc_id)
+    st.session_state[_form_key("prev_loc", None)] = loc_id
+    est_filtrados = catalogos.establecimientos_por_localidad(cats["establecimientos"], loc_id)
+    est_items = [{**row, "display": row["nombre"]} for row in est_filtrados]
+    _asignar_indice_select(_form_key("est", None), est_items, est_id)
+
+
+def _preparar_otro_compromiso_mismo_establecimiento(
+    modo: str,
+    rep_id: str | None,
+    loc_id: str | None,
+    est_id: str | None,
+) -> None:
+    st.session_state["form_preset_ubicacion"] = {
+        "reparticion_id": rep_id,
+        "localidad_id": loc_id,
+        "establecimiento_id": est_id,
+    }
+    st.session_state["form_apply_ubicacion_preset"] = True
+    st.session_state["form_forzar_reinit_lineas"] = True
+    st.session_state.pop("lineas_form", None)
+    st.session_state.pop("_form_edit", None)
+    st.session_state.pop("asist_saved_id", None)
+    if modo == "ejecutivo":
+        st.session_state.exec_form_mode = "new"
+        st.session_state.exec_form_edit_id = None
+        st.session_state._exec_flash_msg = (
+            "Compromiso guardado. Cargá otro para el mismo establecimiento."
+        )
+    else:
+        st.session_state.pop("edit_compromiso_id", None)
+        st.session_state._nav_asistente_page = "Formulario"
+        st.session_state._flash_msg = (
+            "Compromiso guardado. Cargá otro para el mismo establecimiento."
+        )
+
+
+def _render_fila_guardar_compromiso(
+    *,
+    edit_suffix: str,
+    save_label: str,
+    mostrar_guardar_otro: bool,
+    key_prefix: str,
+) -> tuple[bool, bool, bool]:
+    if mostrar_guardar_otro:
+        c1, c2, c3 = st.columns(3)
+        with c1:
+            save = st.form_submit_button(
+                save_label,
+                type="primary",
+                use_container_width=True,
+                key=f"save_{key_prefix}_{edit_suffix}",
+            )
+        with c2:
+            save_otro = st.form_submit_button(
+                _SAVE_OTRO_LABEL,
+                type="secondary",
+                use_container_width=True,
+                key=f"save_otro_{key_prefix}_{edit_suffix}",
+                help=_SAVE_OTRO_HELP,
+            )
+        with c3:
+            cancel = st.form_submit_button(
+                "Cancelar",
+                type="secondary",
+                use_container_width=True,
+                key=f"cancel_{key_prefix}_{edit_suffix}",
+            )
+        return save, save_otro, cancel
+    c1, c2 = st.columns(2)
+    with c1:
+        save = st.form_submit_button(
+            save_label,
+            type="primary",
+            use_container_width=True,
+            key=f"save_{key_prefix}_{edit_suffix}",
+        )
+    with c2:
+        cancel = st.form_submit_button(
+            "Cancelar",
+            type="secondary",
+            use_container_width=True,
+            key=f"cancel_{key_prefix}_{edit_suffix}",
+        )
+    return save, False, cancel
+
+
+def limpiar_ubicacion_formulario_nuevo() -> None:
+    """Defaults Ministerio / Corrientes al abrir un formulario nuevo (no «mismo establecimiento»)."""
+    st.session_state.pop("form_preset_ubicacion", None)
+    st.session_state.pop("form_apply_ubicacion_preset", None)
+    for field in ("rep", "loc", "est", "prev_loc", "est_na"):
+        st.session_state.pop(_form_key(field, None), None)
+
+
 def open_asist_form_new(*, return_to: str = "Listado") -> None:
     st.session_state.pop("asist_saved_id", None)
     st.session_state.pop("edit_compromiso_id", None)
@@ -88,6 +232,7 @@ def open_asist_form_new(*, return_to: str = "Listado") -> None:
     st.session_state.pop("lineas_form", None)
     st.session_state.pop("_form_edit", None)
     st.session_state.pop(_form_key("activo", None), None)
+    limpiar_ubicacion_formulario_nuevo()
     st.session_state.form_return_to = return_to
     st.session_state._nav_formulario = True
     st.session_state._nav_asistente_page = "Formulario"
@@ -116,10 +261,12 @@ def _render_linea_form_row(
                 use_container_width=True,
             ):
                 return True
+    ld_key = f"ld_{uid}"
+    if ld_key not in st.session_state:
+        st.session_state[ld_key] = ln.get("descripcion", "") or ""
     st.text_input(
         "Descripción",
-        value=ln.get("descripcion", ""),
-        key=f"ld_{uid}",
+        key=ld_key,
         placeholder="Opcional (si está vacía, se usa el título)",
     )
     ce, ca = st.columns(2)
@@ -207,6 +354,7 @@ def _render_ubicacion(
             "Repartición *",
             cats["reparticiones"],
             _form_key("rep", edit_id),
+            required=True,
             default_id=default_rep,
         )
     with c2:
@@ -418,6 +566,7 @@ def _finalizar_guardado(modo: str, edit_id: str | None, nuevo_id: str | None = N
 
 def render_formulario(client: Client, edit_id: str | None = None, modo: str = "asistente") -> None:
     cats = catalogos.load_catalogos(client)
+    _aplicar_ubicacion_preset_formulario_nuevo(cats)
     existing = compromisos.fetch_compromiso(client, edit_id) if edit_id else None
     lineas_existing = compromisos.fetch_lineas(client, edit_id) if edit_id else []
 
@@ -457,7 +606,11 @@ def render_formulario(client: Client, edit_id: str | None = None, modo: str = "a
     estado_sin_iniciar_id = catalogos.id_por_nombre(cats["estados"], "Sin iniciar")
     ex = existing or {}
 
-    if "lineas_form" not in st.session_state or st.session_state.get("_form_edit") != edit_id:
+    if (
+        "lineas_form" not in st.session_state
+        or st.session_state.get("_form_edit") != edit_id
+        or st.session_state.pop("form_forzar_reinit_lineas", False)
+    ):
         if lineas_existing:
             st.session_state.lineas_form = [
                 _linea_blank(
@@ -474,10 +627,13 @@ def render_formulario(client: Client, edit_id: str | None = None, modo: str = "a
         st.session_state._form_edit = edit_id
         st.session_state[_form_key("activo", edit_id)] = bool(ex.get("activo", True))
 
-    default_rep = ex.get("reparticion_id") or catalogos.id_por_nombre(
-        cats["reparticiones"], "Ministerio de Salud"
-    )
-    default_loc = ex.get("localidad_id") or catalogos.id_por_nombre(cats["localidades"], "Corrientes")
+    preset_ubic = st.session_state.get("form_preset_ubicacion") or {}
+    default_rep = ex.get("reparticion_id") or preset_ubic.get("reparticion_id")
+    default_rep = default_rep or catalogos.id_por_nombre(cats["reparticiones"], "Ministerio de Salud")
+    default_loc = ex.get("localidad_id") or preset_ubic.get("localidad_id")
+    default_loc = default_loc or catalogos.id_por_nombre(cats["localidades"], "Corrientes")
+    if not ex.get("establecimiento_id") and preset_ubic.get("establecimiento_id"):
+        ex = {**ex, "establecimiento_id": preset_ubic["establecimiento_id"]}
 
     with st.container(height=FORM_SCROLL_HEIGHT, border=True):
         st.markdown('<div class="form-scroll-panel-marker"></div>', unsafe_allow_html=True)
@@ -496,11 +652,10 @@ def render_formulario(client: Client, edit_id: str | None = None, modo: str = "a
                     key=_form_key("ps", edit_id),
                 )
         else:
-            st.text_input(
-                "Título del compromiso *",
-                value=ex.get("titulo", ""),
-                key=_form_key("titulo", edit_id),
-            )
+            titulo_key = _form_key("titulo", edit_id)
+            if titulo_key not in st.session_state:
+                st.session_state[titulo_key] = ex.get("titulo", "") or ""
+            st.text_input("Título del compromiso *", key=titulo_key)
 
         rep_id, loc_id, est_id = _render_ubicacion(cats, ex, edit_id, default_rep, default_loc)
 
@@ -561,25 +716,28 @@ def render_formulario(client: Client, edit_id: str | None = None, modo: str = "a
             add_line = False
             save_label = "Guardar evento" if es_agenda else "Guardar compromiso"
             edit_suffix = edit_id or "new"
+            mostrar_guardar_otro = _mostrar_guardar_otro_mismo_establecimiento(edit_id, solo_agenda)
 
-            ct_save, ct_cancel = st.columns(2)
-            with ct_save:
-                save_top = st.form_submit_button(
-                    save_label,
-                    type="primary",
-                    use_container_width=True,
-                    key=f"save_top_{edit_suffix}",
+            if es_agenda:
+                save_top, _, cancel_top = _render_fila_guardar_compromiso(
+                    edit_suffix=edit_suffix,
+                    save_label=save_label,
+                    mostrar_guardar_otro=False,
+                    key_prefix="top",
                 )
-            with ct_cancel:
-                cancel_top = st.form_submit_button(
-                    "Cancelar",
-                    type="secondary",
-                    use_container_width=True,
-                    key=f"cancel_top_{edit_suffix}",
+                save_otro_top = False
+            else:
+                save_top, save_otro_top, cancel_top = _render_fila_guardar_compromiso(
+                    edit_suffix=edit_suffix,
+                    save_label=save_label,
+                    mostrar_guardar_otro=mostrar_guardar_otro,
+                    key_prefix="top",
                 )
 
             save = False
+            save_otro = False
             cancel = False
+            cancel_bottom = False
 
             if not es_agenda:
                 if lineas_ui:
@@ -679,23 +837,14 @@ def render_formulario(client: Client, edit_id: str | None = None, modo: str = "a
 
                     add_line = st.form_submit_button("+ Agregar otra línea", type="secondary")
 
-                c_save, c_cancel = st.columns(2)
-                with c_save:
-                    save = st.form_submit_button(
-                        save_label,
-                        type="primary",
-                        use_container_width=True,
-                        key=f"save_bottom_{edit_suffix}",
-                    )
-                with c_cancel:
-                    cancel = st.form_submit_button(
-                        "Cancelar",
-                        type="secondary",
-                        use_container_width=True,
-                        key=f"cancel_bottom_{edit_suffix}",
-                    )
+                save, save_otro, cancel_bottom = _render_fila_guardar_compromiso(
+                    edit_suffix=edit_suffix,
+                    save_label=save_label,
+                    mostrar_guardar_otro=mostrar_guardar_otro,
+                    key_prefix="bottom",
+                )
 
-            if cancel or cancel_top:
+            if cancel or cancel_top or cancel_bottom:
                 _cancelar_formulario(modo)
                 st.rerun()
 
@@ -713,7 +862,8 @@ def render_formulario(client: Client, edit_id: str | None = None, modo: str = "a
                 st.session_state.lineas_form.append(_linea_blank(estado_id=estado_sin_iniciar_id))
                 st.rerun()
 
-            if save or save_top:
+            guardar = save or save_top or save_otro or save_otro_top
+            if guardar:
                 titulo_guardar = (st.session_state.get(_form_key("titulo", edit_id)) or "").strip()
                 activo = bool(st.session_state.get(activo_key, True))
                 if es_agenda:
@@ -775,7 +925,19 @@ def render_formulario(client: Client, edit_id: str | None = None, modo: str = "a
                     master.pop("created_by", None)
                 try:
                     nuevo_id = compromisos.save_compromiso(client, master, valid_lineas, edit_id)
-                    _finalizar_guardado(modo, edit_id, nuevo_id)
+                    otro_mismo_est = (save_otro or save_otro_top) and not edit_id and not es_agenda
+                    if otro_mismo_est:
+                        rep_guardada = rep_id or catalogos.id_por_nombre(
+                            cats["reparticiones"], "Ministerio de Salud"
+                        )
+                        _preparar_otro_compromiso_mismo_establecimiento(
+                            modo,
+                            rep_guardada,
+                            loc_id,
+                            est_id,
+                        )
+                    else:
+                        _finalizar_guardado(modo, edit_id, nuevo_id)
                     st.rerun()
                 except Exception as exc:
                     st.error(compromisos.format_save_error(exc))
