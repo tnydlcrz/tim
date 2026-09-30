@@ -525,7 +525,11 @@ def render_formulario(client: Client, edit_id: str | None = None, modo: str = "a
         if not es_agenda:
             st.checkbox(activo_label, key=activo_key, help=activo_help)
 
-        if not es_agenda and cat_nombre in ("Obras", "Equipamiento", "Nombramiento") and not est_id:
+        if (
+            not es_agenda
+            and catalogos.categoria_sugiere_establecimiento(cats["categorias"], cat_id)
+            and not est_id
+        ):
             st.warning("Se recomienda indicar establecimiento para esta categoría.")
 
         fecha_inicio: date | None = None

@@ -92,6 +92,18 @@ def nombre_por_id(items: list[dict], item_id: str | None) -> str:
     return ""
 
 
+def categoria_sugiere_establecimiento(
+    categorias: list[dict],
+    categoria_id: str | None,
+) -> bool:
+    if not categoria_id:
+        return False
+    for cat in categorias:
+        if cat.get("id") == categoria_id:
+            return bool(cat.get("sugiere_establecimiento"))
+    return False
+
+
 def id_por_nombre(items: list[dict], nombre: str) -> str | None:
     for item in items:
         if item["nombre"] == nombre:
