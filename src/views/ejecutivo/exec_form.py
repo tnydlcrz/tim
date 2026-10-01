@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import streamlit as st
 
-from src.views.asistente.formulario import limpiar_ubicacion_formulario_nuevo
+from src.views.asistente.form_state import limpiar_ubicacion_formulario_nuevo
 
 TAB_LISTA = "Compromisos"
 TAB_AGENDA = "Agenda"

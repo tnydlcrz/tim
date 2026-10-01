@@ -8,6 +8,7 @@ from supabase import Client
 
 from src.services import catalogos, compromisos
 from src.ui import section_title
+from src.views.asistente.form_state import limpiar_ubicacion_formulario_nuevo
 
 FORM_SCROLL_HEIGHT = 580
 _AMBITO_HELP = (
@@ -215,14 +216,6 @@ def _render_fila_guardar_compromiso(
             key=f"cancel_{key_prefix}_{edit_suffix}",
         )
     return save, False, cancel
-
-
-def limpiar_ubicacion_formulario_nuevo() -> None:
-    """Defaults Ministerio / Corrientes al abrir un formulario nuevo (no «mismo establecimiento»)."""
-    st.session_state.pop("form_preset_ubicacion", None)
-    st.session_state.pop("form_apply_ubicacion_preset", None)
-    for field in ("rep", "loc", "est", "prev_loc", "est_na"):
-        st.session_state.pop(_form_key(field, None), None)
 
 
 def open_asist_form_new(*, return_to: str = "Listado") -> None:
