@@ -673,19 +673,27 @@ button[kind="secondary"]:hover {
 [data-testid="stMain"] .st-key-exec_view_tabs .stButton > button[kind="primary"],
 [data-testid="stMain"] [data-testid="stVerticalBlockBorderWrapper"].st-key-exec_view_tabs .stButton > button[kind="primary"],
 [data-testid="stMain"] [data-testid="stVerticalBlock"].st-key-exec_view_tabs .stButton > button[kind="primary"] {
-    background: #ffffff !important;
-    color: var(--brand-green) !important;
-    border: 1px solid #ffffff !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.14) !important;
+    background: rgba(255, 255, 255, 0.2) !important;
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.38) !important;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+    font-weight: 700 !important;
+}
+
+[data-testid="stMain"] [data-testid="element-container"]:has(.exec-view-tabs-marker) .stButton > button[kind="primary"] p,
+[data-testid="stMain"] [data-testid="element-container"]:has(.exec-view-tabs-marker) .stButton > button[kind="primary"] span,
+[data-testid="stMain"] .st-key-exec_view_tabs .stButton > button[kind="primary"] p,
+[data-testid="stMain"] .st-key-exec_view_tabs .stButton > button[kind="primary"] span {
+    color: #ffffff !important;
 }
 
 [data-testid="stMain"] [data-testid="element-container"]:has(.exec-view-tabs-marker) .stButton > button[kind="primary"]:hover,
 [data-testid="stMain"] .st-key-exec_view_tabs .stButton > button[kind="primary"]:hover,
 [data-testid="stMain"] [data-testid="stVerticalBlockBorderWrapper"].st-key-exec_view_tabs .stButton > button[kind="primary"]:hover,
 [data-testid="stMain"] [data-testid="stVerticalBlock"].st-key-exec_view_tabs .stButton > button[kind="primary"]:hover {
-    background: #f8faf9 !important;
-    color: var(--brand-green) !important;
-    border-color: #ffffff !important;
+    background: rgba(255, 255, 255, 0.26) !important;
+    color: #ffffff !important;
+    border-color: rgba(255, 255, 255, 0.45) !important;
 }
 
 [data-testid="stMain"] [data-testid="stHorizontalBlock"]:has(.exec-toolbar-label) {
