@@ -246,6 +246,28 @@ def compute_kpis(df: pd.DataFrame) -> dict[str, int]:
     }
 
 
+def compute_agenda_kpis(
+    client: Client,
+    dia: date,
+    *,
+    incluir_inactivos: bool = False,
+) -> dict[str, int]:
+    df = _agenda_base(fetch_panel(client, incluir_inactivos=True), incluir_inactivos)
+    if df.empty:
+        return {"del_dia": 0, "sin_fecha": 0, "urgente_altas": 0, "total_agenda": 0}
+    fechas = pd.to_datetime(df["fecha_inicio"], errors="coerce").dt.date
+    del_dia = int((fechas == dia).sum())
+    sin_fecha = int(df["fecha_inicio"].isna().sum())
+    pri = df["prioridad"].astype(str).str.lower()
+    urgente_altas = int(df[pri.str.contains("urgent|alta", na=False)].shape[0])
+    return {
+        "del_dia": del_dia,
+        "sin_fecha": sin_fecha,
+        "urgente_altas": urgente_altas,
+        "total_agenda": len(df),
+    }
+
+
 def _clean_campo(value: object) -> str:
     if value is None or (isinstance(value, float) and value != value):
         return ""

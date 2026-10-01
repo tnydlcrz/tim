@@ -703,6 +703,7 @@ button[kind="secondary"]:hover {
 
 [data-testid="stMain"] div[data-testid="stHorizontalBlock"]:has([data-testid="stMetric"]) {
     margin-bottom: 0.2rem;
+    min-height: 5.35rem;
 }
 
 [data-testid="stSidebar"] div[data-testid="stRadio"] > div[role="radiogroup"] {

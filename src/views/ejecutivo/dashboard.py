@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import date
 from html import escape
 
 import streamlit as st
@@ -8,7 +9,7 @@ from supabase import Client
 
 from src.services import compromisos
 from src.ui import badge, estado_kind, format_fecha, format_hora, prioridad_kind, progress_bar_block, render_compromiso_row_compact, rerun_app, row_text
-from src.views.agenda import render_agenda
+from src.views.agenda import _init_agenda_state, render_agenda
 from src.views.asistente.formulario import render_formulario
 from src.views.compromiso_detalle import render_compromiso_info
 from src.views.ejecutivo import exec_form
@@ -115,6 +116,20 @@ def _kpi_row(kpis: dict) -> None:
     c2.metric("Urgente + Altas", kpis["urgente_altas"])
     c3.metric("Demorados", kpis["demorados"])
     c4.metric("Completados", kpis["completados"])
+
+
+def _agenda_kpi_row(client: Client) -> None:
+    _init_agenda_state()
+    dia = st.session_state.agenda_fecha
+    if not isinstance(dia, date):
+        dia = compromisos.hoy_ar()
+    incluir = bool(st.session_state.get("agenda_inactivos", False))
+    kpis = compromisos.compute_agenda_kpis(client, dia, incluir_inactivos=incluir)
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Eventos del día", kpis["del_dia"])
+    c2.metric("Sin fecha", kpis["sin_fecha"])
+    c3.metric("Urgente + Altas", kpis["urgente_altas"])
+    c4.metric("Total agenda", kpis["total_agenda"])
 
 
 def _chart_lens(df, lens: str):
@@ -275,11 +290,19 @@ def _render_exec_view_tabs() -> None:
                         st.rerun()
 
 
+def _exec_kpi_row(client: Client, kpis: dict) -> None:
+    if st.session_state.get("exec_view", TAB_LISTA) == TAB_AGENDA:
+        _agenda_kpi_row(client)
+    else:
+        _kpi_row(kpis)
+
+
 @st.fragment
-def _exec_tab_content(filtered, client: Client) -> None:
+def _exec_tab_content(filtered, client: Client, kpis: dict) -> None:
     if st.session_state.pop("_nav_exec_lista", False):
         st.session_state["exec_view"] = TAB_LISTA
 
+    _exec_kpi_row(client, kpis)
     _render_exec_view_tabs()
     view = st.session_state.get("exec_view", TAB_LISTA)
     if view == TAB_LISTA:
@@ -383,22 +406,15 @@ def render_dashboard(client: Client) -> None:
         return
 
     df_compromisos = compromisos.panel_sin_agenda(df_all)
-    en_agenda = st.session_state.get("exec_view") == TAB_AGENDA
+    filtered, activos = _sidebar_filters(df_compromisos)
+    kpis = compromisos.compute_kpis(activos)
+
+    if st.session_state.get("exec_view") == TAB_AGENDA:
+        st.sidebar.caption("Los filtros de compromisos no aplican a la vista Agenda.")
 
     if st.session_state.exec_selected_id:
-        if not en_agenda:
-            filtered, activos = _sidebar_filters(df_compromisos)
-            kpis = compromisos.compute_kpis(activos)
-            _kpi_row(kpis)
+        _exec_kpi_row(client, kpis)
         _render_detalle(client, st.session_state.exec_selected_id)
         return
 
-    if en_agenda:
-        st.sidebar.caption("Los filtros de compromisos no aplican a la vista Agenda.")
-        filtered = df_all
-    else:
-        filtered, activos = _sidebar_filters(df_compromisos)
-        kpis = compromisos.compute_kpis(activos)
-        _kpi_row(kpis)
-
-    _exec_tab_content(filtered, client)
+    _exec_tab_content(filtered, client, kpis)
