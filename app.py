@@ -27,10 +27,10 @@ def _render_app(client) -> None:
             st.rerun()
 
     if is_ejecutivo():
-        render_header("Vista ejecutiva")
+        render_header()
         render_dashboard(client)
     elif is_asistente():
-        render_header("Carga de compromisos")
+        render_header()
         nav_from_edit = st.session_state.pop("_nav_formulario", False)
         if nav_from_edit:
             st.session_state["asistente_page"] = "Formulario"
