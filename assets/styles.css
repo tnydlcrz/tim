@@ -482,6 +482,11 @@ button[kind="secondary"]:hover {
     color: var(--text-primary);
 }
 
+.exec-list-meta-below {
+    margin-top: 0.45rem !important;
+    margin-bottom: 0 !important;
+}
+
 .exec-filter-banner {
     background: #EFF6FF;
     border: 1px solid #BFDBFE;
@@ -609,10 +614,90 @@ button[kind="secondary"]:hover {
     font-weight: 600;
     color: var(--brand-green);
     display: block;
-    margin-bottom: 0.25rem;
+    margin: 0;
+    line-height: 1.15;
 }
 
-div[data-testid="stRadio"] > div[role="radiogroup"] {
+/* Vista ejecutiva: pestañas Compromisos / Agenda / Gráficos (misma línea visual que .exec-header) */
+.exec-view-tabs-marker {
+    display: none !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+[data-testid="stMain"] [data-testid="element-container"]:has(.exec-view-tabs-marker),
+[data-testid="stMain"] .st-key-exec_view_tabs,
+[data-testid="stMain"] [data-testid="stVerticalBlockBorderWrapper"].st-key-exec_view_tabs,
+[data-testid="stMain"] [data-testid="stVerticalBlock"].st-key-exec_view_tabs {
+    background: linear-gradient(135deg, var(--brand-green) 0%, var(--brand-green-light) 100%) !important;
+    border: none !important;
+    border-bottom: 3px solid var(--accent-gold) !important;
+    border-radius: 12px !important;
+    padding: 0.38rem 0.42rem !important;
+    margin-bottom: 0.45rem !important;
+    gap: 0.35rem !important;
+    box-sizing: border-box !important;
+}
+
+[data-testid="stMain"] [data-testid="element-container"]:has(.exec-view-tabs-marker) .stButton > button,
+[data-testid="stMain"] .st-key-exec_view_tabs .stButton > button,
+[data-testid="stMain"] [data-testid="stVerticalBlockBorderWrapper"].st-key-exec_view_tabs .stButton > button,
+[data-testid="stMain"] [data-testid="stVerticalBlock"].st-key-exec_view_tabs .stButton > button {
+    font-weight: 600 !important;
+    font-size: 0.95rem !important;
+    border-radius: 8px !important;
+    min-height: 2.25rem !important;
+    box-shadow: none !important;
+}
+
+[data-testid="stMain"] [data-testid="element-container"]:has(.exec-view-tabs-marker) .stButton > button[kind="secondary"],
+[data-testid="stMain"] .st-key-exec_view_tabs .stButton > button[kind="secondary"],
+[data-testid="stMain"] [data-testid="stVerticalBlockBorderWrapper"].st-key-exec_view_tabs .stButton > button[kind="secondary"],
+[data-testid="stMain"] [data-testid="stVerticalBlock"].st-key-exec_view_tabs .stButton > button[kind="secondary"] {
+    color: rgba(255, 255, 255, 0.94) !important;
+    background: transparent !important;
+    border: 1px solid transparent !important;
+}
+
+[data-testid="stMain"] [data-testid="element-container"]:has(.exec-view-tabs-marker) .stButton > button[kind="secondary"]:hover,
+[data-testid="stMain"] .st-key-exec_view_tabs .stButton > button[kind="secondary"]:hover,
+[data-testid="stMain"] [data-testid="stVerticalBlockBorderWrapper"].st-key-exec_view_tabs .stButton > button[kind="secondary"]:hover,
+[data-testid="stMain"] [data-testid="stVerticalBlock"].st-key-exec_view_tabs .stButton > button[kind="secondary"]:hover {
+    background: rgba(255, 255, 255, 0.14) !important;
+    border-color: rgba(255, 255, 255, 0.22) !important;
+    color: #ffffff !important;
+}
+
+[data-testid="stMain"] [data-testid="element-container"]:has(.exec-view-tabs-marker) .stButton > button[kind="primary"],
+[data-testid="stMain"] .st-key-exec_view_tabs .stButton > button[kind="primary"],
+[data-testid="stMain"] [data-testid="stVerticalBlockBorderWrapper"].st-key-exec_view_tabs .stButton > button[kind="primary"],
+[data-testid="stMain"] [data-testid="stVerticalBlock"].st-key-exec_view_tabs .stButton > button[kind="primary"] {
+    background: #ffffff !important;
+    color: var(--brand-green) !important;
+    border: 1px solid #ffffff !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.14) !important;
+}
+
+[data-testid="stMain"] [data-testid="element-container"]:has(.exec-view-tabs-marker) .stButton > button[kind="primary"]:hover,
+[data-testid="stMain"] .st-key-exec_view_tabs .stButton > button[kind="primary"]:hover,
+[data-testid="stMain"] [data-testid="stVerticalBlockBorderWrapper"].st-key-exec_view_tabs .stButton > button[kind="primary"]:hover,
+[data-testid="stMain"] [data-testid="stVerticalBlock"].st-key-exec_view_tabs .stButton > button[kind="primary"]:hover {
+    background: #f8faf9 !important;
+    color: var(--brand-green) !important;
+    border-color: #ffffff !important;
+}
+
+[data-testid="stMain"] [data-testid="stHorizontalBlock"]:has(.exec-toolbar-label) {
+    margin-top: 0 !important;
+    gap: 0.35rem;
+}
+
+[data-testid="stMain"] div[data-testid="stHorizontalBlock"]:has([data-testid="stMetric"]) {
+    margin-bottom: 0.2rem;
+}
+
+[data-testid="stSidebar"] div[data-testid="stRadio"] > div[role="radiogroup"] {
     gap: 0.5rem;
     margin-bottom: 0.65rem;
     padding-bottom: 0.35rem;

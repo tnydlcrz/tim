@@ -183,8 +183,7 @@ def _render_lista_scroll(df) -> None:
         _render_lista_filas(df)
 
 
-@st.fragment
-def _exec_lista_fragment(filtered) -> None:
+def _render_exec_lista_compromisos(filtered) -> None:
     chart_filter = st.session_state.get("exec_chart_filter")
     lista = filtered
     if chart_filter:
@@ -230,24 +229,65 @@ def _exec_lista_fragment(filtered) -> None:
     lista = compromisos.filter_search(lista, q)
     lista = compromisos.sort_panel(lista, sort)
 
+    _render_lista_scroll(lista)
+
     mc1, mc2 = st.columns([1, 4], vertical_alignment="center")
     with mc1:
         st.markdown(
-            f'<p class="exec-list-count exec-list-count-inline">{len(lista)} compromiso(s)</p>',
+            f'<p class="exec-list-count exec-list-count-inline exec-list-meta-below">'
+            f"{len(lista)} compromiso(s)</p>",
             unsafe_allow_html=True,
         )
     with mc2:
         st.markdown(
-            '<p class="exec-list-hint">Consultá el detalle de cada ítem con '
+            '<p class="exec-list-hint exec-list-meta-below">Consultá el detalle de cada ítem con '
             "<strong>Ver</strong>. Desde ahí podés editar o eliminar.</p>",
             unsafe_allow_html=True,
         )
 
-    _render_lista_scroll(lista)
+
+_TAB_BTN_KEYS = {
+    TAB_LISTA: "exec_tab_lista",
+    TAB_AGENDA: "exec_tab_agenda",
+    TAB_GRAFICOS: "exec_tab_graficos",
+}
 
 
-def _render_tab_compromisos(filtered) -> None:
-    _exec_lista_fragment(filtered)
+def _render_exec_view_tabs() -> None:
+    view = st.session_state.get("exec_view", TAB_LISTA)
+    tab_options = [TAB_LISTA, TAB_AGENDA, TAB_GRAFICOS]
+    with st.container(key="exec_view_tabs", width="stretch"):
+        st.markdown(
+            '<div class="exec-view-tabs-marker" aria-hidden="true"></div>',
+            unsafe_allow_html=True,
+        )
+        c1, c2, c3 = st.columns(3, gap="small")
+        for col, tab in zip((c1, c2, c3), tab_options, strict=True):
+            with col:
+                if st.button(
+                    tab,
+                    key=_TAB_BTN_KEYS[tab],
+                    type="primary" if view == tab else "secondary",
+                    use_container_width=True,
+                ):
+                    if st.session_state.get("exec_view", TAB_LISTA) != tab:
+                        st.session_state.exec_view = tab
+                        st.rerun()
+
+
+@st.fragment
+def _exec_tab_content(filtered, client: Client) -> None:
+    if st.session_state.pop("_nav_exec_lista", False):
+        st.session_state["exec_view"] = TAB_LISTA
+
+    _render_exec_view_tabs()
+    view = st.session_state.get("exec_view", TAB_LISTA)
+    if view == TAB_LISTA:
+        _render_exec_lista_compromisos(filtered)
+    elif view == TAB_AGENDA:
+        render_agenda(client, modo="ejecutivo")
+    else:
+        _render_tab_graficos(filtered)
 
 
 def _render_tab_graficos(filtered) -> None:
@@ -361,19 +401,4 @@ def render_dashboard(client: Client) -> None:
         kpis = compromisos.compute_kpis(activos)
         _kpi_row(kpis)
 
-    if st.session_state.pop("_nav_exec_lista", False):
-        st.session_state["exec_view"] = TAB_LISTA
-
-    view = st.radio(
-        "Vista",
-        [TAB_LISTA, TAB_AGENDA, TAB_GRAFICOS],
-        horizontal=True,
-        key="exec_view",
-        label_visibility="collapsed",
-    )
-    if view == TAB_LISTA:
-        _render_tab_compromisos(filtered)
-    elif view == TAB_AGENDA:
-        render_agenda(client, modo="ejecutivo")
-    else:
-        _render_tab_graficos(filtered)
+    _exec_tab_content(filtered, client)
