@@ -94,19 +94,21 @@ def _listado_lista_fragment(df) -> None:
     lista = compromisos.filter_search(df, q)
     lista = compromisos.sort_panel(lista, sort)
 
+    _render_lista_scroll(lista)
+
     mc1, mc2 = st.columns([1, 4], vertical_alignment="center")
     with mc1:
         st.markdown(
-            f'<p class="exec-list-count exec-list-count-inline">{len(lista)} compromiso(s)</p>',
+            f'<p class="exec-list-count exec-list-count-inline exec-list-meta-below">'
+            f"{len(lista)} compromiso(s)</p>",
             unsafe_allow_html=True,
         )
     with mc2:
         st.markdown(
-            '<p class="exec-list-hint">Consultá el detalle de cada ítem con '
+            '<p class="exec-list-hint exec-list-meta-below">Consultá el detalle de cada ítem con '
             "<strong>Editar</strong>. Desde ahí podés modificar o eliminar.</p>",
             unsafe_allow_html=True,
         )
-    _render_lista_scroll(lista)
 
 
 def _render_post_guardado(client: Client) -> None:
