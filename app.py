@@ -1,6 +1,14 @@
 import streamlit as st
 
-from src.auth import handle_auth_error, init_session, is_asistente, is_ejecutivo, logout, require_auth
+from src.auth import (
+    ensure_authenticated_client,
+    handle_auth_error,
+    init_session,
+    is_asistente,
+    is_ejecutivo,
+    logout,
+    require_auth,
+)
 from src.supabase_client import get_client
 from src.ui import load_css, render_header
 from src.views.asistente.form_state import limpiar_ubicacion_formulario_nuevo
@@ -61,21 +69,9 @@ def _render_app(client) -> None:
         st.error("Rol no reconocido. Actualizá la tabla profiles en Supabase.")
 
 
-def _preflight_auth(client) -> bool:
+def _preflight_auth() -> bool:
     """Valida el token antes de pintar la UI. False → sesión expirada (ya limpiada)."""
-    user_id = st.session_state.get("user_id")
-    if not user_id:
-        return False
-    try:
-        client.table("profiles").select("id").eq("id", user_id).limit(1).execute()
-        return True
-    except Exception as exc:
-        auth_action = handle_auth_error(exc)
-        if auth_action == "refresh":
-            return True
-        if auth_action == "expired":
-            return False
-        raise
+    return ensure_authenticated_client() is not None
 
 
 def main() -> None:
@@ -87,8 +83,7 @@ def main() -> None:
         return
 
     try:
-        client = get_client()
-        if not _preflight_auth(client):
+        if not _preflight_auth():
             st.rerun()
             return
         client = get_client()

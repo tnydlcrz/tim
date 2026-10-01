@@ -1,6 +1,11 @@
+from collections.abc import Callable
+from typing import TypeVar
+
 import streamlit as st
 
 from src.supabase_client import clear_client_cache, get_client
+
+T = TypeVar("T")
 
 
 def is_auth_error(exc: BaseException) -> bool:
@@ -15,7 +20,12 @@ def is_auth_error(exc: BaseException) -> bool:
             if isinstance(err, dict):
                 code = str(err.get("code", "")).upper()
                 message = str(err.get("message", "")).lower()
-                if code == "PGRST303" or "jwt" in message:
+                status = err.get("status") or err.get("statusCode")
+                if code in ("PGRST301", "PGRST302", "PGRST303"):
+                    return True
+                if status in (401, "401"):
+                    return True
+                if "jwt" in message or "expired" in message:
                     return True
     except ImportError:
         pass
@@ -36,6 +46,9 @@ def try_refresh_session() -> bool:
         st.session_state.access_token = session.access_token
         st.session_state.refresh_token = session.refresh_token
         clear_client_cache()
+        from src.data_cache import invalidate_data_cache
+
+        invalidate_data_cache()
         return True
     except Exception:
         return False
@@ -58,6 +71,37 @@ def session_expired() -> None:
 
     invalidate_data_cache()
     st.session_state._login_msg = "Tu sesión expiró. Volvé a iniciar sesión."
+
+
+def run_with_auth_retry(fn: Callable[[], T]) -> T:
+    """Ejecuta una lectura Supabase; renueva token y reintenta una vez si expiró."""
+    try:
+        return fn()
+    except Exception as exc:
+        auth_action = handle_auth_error(exc)
+        if auth_action == "refresh":
+            return fn()
+        if auth_action == "expired":
+            st.rerun()
+        raise
+
+
+def ensure_authenticated_client():
+    """Comprueba o renueva la sesión. None → login."""
+    user_id = st.session_state.get("user_id")
+    if not user_id:
+        return None
+    client = get_client()
+    try:
+        client.table("profiles").select("id").eq("id", user_id).limit(1).execute()
+        return get_client()
+    except Exception as exc:
+        auth_action = handle_auth_error(exc)
+        if auth_action == "refresh":
+            return get_client()
+        if auth_action == "expired":
+            return None
+        raise
 
 
 def handle_auth_error(exc: BaseException) -> str | None:

@@ -7,6 +7,7 @@ import streamlit as st
 import plotly.express as px
 from supabase import Client
 
+from src.auth import ensure_authenticated_client
 from src.services import compromisos
 from src.ui import badge, estado_kind, format_fecha, format_hora, prioridad_kind, progress_bar_block, render_compromiso_row_compact, rerun_app, row_text
 from src.views.agenda import _init_agenda_state, render_agenda
@@ -299,6 +300,10 @@ def _exec_kpi_row(client: Client, kpis: dict) -> None:
 
 @st.fragment
 def _exec_tab_content(filtered, client: Client, kpis: dict) -> None:
+    if ensure_authenticated_client() is None:
+        rerun_app()
+        return
+
     if st.session_state.pop("_nav_exec_lista", False):
         st.session_state["exec_view"] = TAB_LISTA
 

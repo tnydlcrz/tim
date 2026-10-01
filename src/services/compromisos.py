@@ -68,9 +68,13 @@ def _fetch_panel_impl(client: Client, incluir_inactivos: bool = False) -> pd.Dat
 
 
 def fetch_panel(client: Client, incluir_inactivos: bool = False) -> pd.DataFrame:
+    from src.auth import run_with_auth_retry
     from src.data_cache import fetch_panel_cached, user_cache_key
 
-    return fetch_panel_cached(incluir_inactivos, user_cache_key())
+    def _load() -> pd.DataFrame:
+        return fetch_panel_cached(incluir_inactivos, user_cache_key())
+
+    return run_with_auth_retry(_load)
 
 
 def hoy_ar() -> date:
