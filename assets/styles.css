@@ -190,6 +190,27 @@
     font-size: 0.9rem;
 }
 
+[data-testid="stMain"] h2.detalle-titulo {
+    font-size: 1.1rem !important;
+    font-weight: 600 !important;
+    color: var(--text-primary) !important;
+    margin: 0 0 0.35rem 0 !important;
+    line-height: 1.35 !important;
+}
+
+[data-testid="stMain"] p.detalle-lineas-heading {
+    font-size: 0.875rem !important;
+    font-weight: 700 !important;
+    color: var(--brand-green) !important;
+    margin: 0.85rem 0 0.45rem 0 !important;
+    line-height: 1.3 !important;
+}
+
+[data-testid="stMain"] p.detalle-lineas-heading strong {
+    font-weight: 700 !important;
+    color: var(--brand-green) !important;
+}
+
 .linea-card {
     display: flex;
     justify-content: space-between;
@@ -198,8 +219,15 @@
     background: var(--surface-gray);
     border: 1px solid var(--surface-border-light);
     border-radius: 8px;
-    padding: 0.75rem 1rem;
+    padding: 0.65rem 0.85rem;
     margin-bottom: 0.5rem;
+}
+
+.linea-card-text {
+    font-size: 0.9rem;
+    line-height: 1.35;
+    color: var(--text-primary);
+    font-weight: 500;
 }
 
 .linea-card-meta {

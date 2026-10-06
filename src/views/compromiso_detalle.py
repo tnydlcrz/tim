@@ -38,7 +38,7 @@ def render_compromiso_info(
         f'{badge(row.get("prioridad", ""), pk)}{cat_badge}'
         f'<span class="detalle-ubicacion">{escape(ubicacion)}</span>'
         f"</div>"
-        f"<h2>{escape(titulo)}</h2>"
+        f'<h2 class="detalle-titulo">{escape(titulo)}</h2>'
         + (f'<p class="card-categoria">{escape(sub)}</p>' if sub else ""),
         unsafe_allow_html=True,
     )
@@ -77,15 +77,19 @@ def render_compromiso_info(
         st.write(f"**Tel:** [{row['telefono_solicitante']}](tel:{row['telefono_solicitante']})")
 
     if not es_agenda:
-        st.markdown("#### Ítems del compromiso")
+        st.markdown(
+            '<p class="detalle-lineas-heading"><strong>Ítems del compromiso:</strong></p>',
+            unsafe_allow_html=True,
+        )
         for ln in lineas:
             edo = ln.get("estados") or {}
             ename = edo.get("nombre", "")
             ek = estado_kind(ename)
+            desc = escape(ln.get("descripcion") or "")
             st.markdown(
                 f"""
                 <div class="linea-card">
-                    <span>{ln.get('descripcion','')}</span>
+                    <span class="linea-card-text">{desc}</span>
                     <div class="linea-card-meta">
                         <span class="linea-avance">{int(ln.get('avance_pct') or 0)}%</span>
                         {badge(ename, ek)}
