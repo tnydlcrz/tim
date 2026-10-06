@@ -38,7 +38,7 @@ def render_compromiso_info(
         f'{badge(row.get("prioridad", ""), pk)}{cat_badge}'
         f'<span class="detalle-ubicacion">{escape(ubicacion)}</span>'
         f"</div>"
-        f'<h2 class="detalle-titulo">{escape(titulo)}</h2>'
+        f'<p class="detalle-titulo">{escape(titulo)}</p>'
         + (f'<p class="card-categoria">{escape(sub)}</p>' if sub else ""),
         unsafe_allow_html=True,
     )

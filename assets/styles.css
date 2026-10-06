@@ -190,12 +190,17 @@
     font-size: 0.9rem;
 }
 
+[data-testid="stMain"] p.detalle-titulo,
 [data-testid="stMain"] h2.detalle-titulo {
     font-size: 1.1rem !important;
     font-weight: 600 !important;
     color: var(--text-primary) !important;
     margin: 0 0 0.35rem 0 !important;
     line-height: 1.35 !important;
+}
+
+[data-testid="stMain"] div[data-testid="stMarkdown"] p.detalle-titulo {
+    font-size: 1.1rem !important;
 }
 
 [data-testid="stMain"] p.detalle-lineas-heading {
